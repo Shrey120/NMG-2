@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { business } from '../business.js';
+import { useLoad } from '../useLoad.js';
 
 // The client had no existing policies and asked us to include samples.
 // These are drafts for the client to react to, written by students, and they
@@ -17,6 +17,9 @@ function Draft() {
 }
 
 function Page({ title, children }) {
+  const { data } = useLoad('/business');
+  const business = data || { name: 'the workshop', email: '' };
+
   return (
     <>
       <section className="invert">
@@ -41,6 +44,9 @@ function Page({ title, children }) {
 }
 
 export function Privacy() {
+  const { data } = useLoad('/business');
+  const business = data || { name: 'the workshop', email: '' };
+
   return (
     <Page title="Privacy policy">
       <div className="stack">
@@ -86,6 +92,9 @@ export function Privacy() {
 }
 
 export function Terms() {
+  const { data } = useLoad('/business');
+  const business = data || { name: 'the workshop' };
+
   return (
     <Page title="Terms of use">
       <div className="stack">
@@ -121,6 +130,9 @@ export function Terms() {
 }
 
 export function MarketplaceTerms() {
+  const { data } = useLoad('/business');
+  const business = data || { name: 'the workshop' };
+
   return (
     <Page title="Marketplace terms">
       <div className="stack">

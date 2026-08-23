@@ -16,6 +16,7 @@ const STAFF_LINKS = [
 const ADMIN_LINKS = [
   { to: '/admin/services', label: 'Services' },
   { to: '/admin/projects', label: 'Portfolio' },
+  { to: '/admin/business', label: 'Business details' },
 ];
 
 export default function AdminMenu() {

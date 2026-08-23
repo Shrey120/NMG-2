@@ -5,6 +5,8 @@
 --
 -- Tables are dropped child first so the foreign keys do not block the drop.
 
+DROP TABLE IF EXISTS openingHours;
+DROP TABLE IF EXISTS businessDetails;
 DROP TABLE IF EXISTS offerMessages;
 DROP TABLE IF EXISTS exchangeOffers;
 DROP TABLE IF EXISTS bookings;
@@ -43,6 +45,28 @@ CREATE TABLE users (
 -- ---------------------------------------------------------------------------
 -- Website content, managed by an administrator
 -- ---------------------------------------------------------------------------
+
+-- The business details shown in the footer and on the contact page. Always
+-- exactly one row, which is why every query uses "WHERE id = 1". The client
+-- said they will maintain their own business information after launch, so it
+-- lives in the database rather than in the code.
+CREATE TABLE businessDetails (
+  id     INT PRIMARY KEY,
+  name   VARCHAR(120) NOT NULL,
+  abn    VARCHAR(40)  NOT NULL,
+  suburb VARCHAR(120) NOT NULL,
+  email  VARCHAR(150) NOT NULL,
+  blurb  VARCHAR(400) NOT NULL
+);
+
+-- One row per line of the opening hours table. A separate table because the
+-- client may want to add or remove lines, such as a public holiday note.
+CREATE TABLE openingHours (
+  id        INT AUTO_INCREMENT PRIMARY KEY,
+  label     VARCHAR(80) NOT NULL,
+  hours     VARCHAR(80) NOT NULL,
+  sortOrder INT NOT NULL DEFAULT 0
+);
 
 CREATE TABLE services (
   id        INT AUTO_INCREMENT PRIMARY KEY,

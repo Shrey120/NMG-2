@@ -50,7 +50,7 @@ the record of what was asked, what was answered, and what we changed.
 | 16 | Consent | **Consult data and privacy laws** | **Added** - consent checkbox on every form that stores data |
 | 17 | Enquiry types | **All of them** | No change - already four types |
 | 18 | Who supplies content | **Outlier Autowerke staff** | - |
-| 19 | Who updates after launch | **Outlier Autowerke** | Admin panel covers it |
+| 19 | Who updates after launch | **Outlier Autowerke** | **Added** - business details and opening hours are editable at `/admin/business`, so no developer is needed to change them |
 
 ---
 

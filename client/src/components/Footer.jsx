@@ -1,7 +1,12 @@
 import { Link } from 'react-router-dom';
-import { business } from '../business.js';
+import { useLoad } from '../useLoad.js';
 
 export default function Footer() {
+  // The business details come from the database so an administrator can
+  // change them without a developer.
+  const { data } = useLoad('/business');
+  const business = data || { name: '', abn: '', suburb: '', email: '', blurb: '' };
+
   return (
     <footer className="footer invert">
       <div className="page">
@@ -14,10 +19,7 @@ export default function Footer() {
                 <small style={{ color: '#a8a8a8' }}>AUTOWERKE</small>
               </span>
             </div>
-            <p className="small muted" style={{ marginTop: 16 }}>
-              European car specialists. Tuning, engine building, restoration and
-              hard to find parts.
-            </p>
+            <p className="small muted" style={{ marginTop: 16 }}>{business.blurb}</p>
           </div>
 
           <div>
@@ -47,7 +49,7 @@ export default function Footer() {
                 trading name, ABN, suburb and email. No phone number. */}
             <div className="stack small muted" style={{ marginTop: 12 }}>
               <div>{business.name}</div>
-              <div>ABN {business.abn}</div>
+              <div>{business.abn && `ABN ${business.abn}`}</div>
               <div>{business.suburb}</div>
               <div>{business.email}</div>
             </div>

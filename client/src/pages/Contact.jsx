@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { postForm } from '../api.js';
 import { isSignedIn, currentName } from '../auth.js';
-import { business } from '../business.js';
+import { useLoad } from '../useLoad.js';
 
 const TYPES = ['General', 'Service', 'Parts', 'Collaboration'];
 
 export default function Contact() {
+  const { data } = useLoad('/business');
+  const business = data || { name: '', abn: '', suburb: '', email: '', hours: [] };
+
   const [form, setForm] = useState({
     type: 'General',
     name: isSignedIn() ? currentName() : '',
@@ -159,10 +162,10 @@ export default function Contact() {
               <div className="card card-body">
                 <h3>Opening hours</h3>
                 <div style={{ marginTop: 12 }}>
-                  {business.hours.map(([day, hours]) => (
-                    <div className="detail-row" key={day}>
-                      <span className="muted">{day}</span>
-                      <span>{hours}</span>
+                  {(business.hours || []).map((line) => (
+                    <div className="detail-row" key={line.id}>
+                      <span className="muted">{line.label}</span>
+                      <span>{line.hours}</span>
                     </div>
                   ))}
                 </div>

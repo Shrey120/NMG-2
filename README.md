@@ -112,6 +112,8 @@ client/src/
 | Table | Holds |
 |---|---|
 | `users` | accounts, with a role of CUSTOMER, STAFF or ADMIN |
+| `businessDetails` | trading name, ABN, suburb, email and footer text (one row) |
+| `openingHours` | one row per line of the opening hours table |
 | `services` | the workshop service list, and whether each can be booked online |
 | `projects` | portfolio builds |
 | `projectWork` | bullet points belonging to a project (one to many) |
@@ -155,6 +157,7 @@ as JSON without renaming anything in between.
 | Customer accounts, optional | `/register`, `/signin`, `/account` |
 | Three roles, two admin levels | CUSTOMER, STAFF, ADMIN |
 | Admin manages services and portfolio | `/admin/services`, `/admin/projects` (administrator only) |
+| Admin manages business details and hours | `/admin/business` (administrator only) |
 | Admin manages listings, posts, reviews | `/admin/*` (staff and administrator) |
 | Privacy, terms and marketplace policies | `/privacy`, `/terms`, `/marketplace-terms` |
 | Consent before storing personal details | every form that saves data |

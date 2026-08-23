@@ -1,3 +1,12 @@
+INSERT INTO businessDetails (id, name, abn, suburb, email, blurb) VALUES
+(1, 'Outlier Autowerke', '00 000 000 000', 'Sunshine Coast, QLD', 'hello@outlierautowerke.example',
+ 'European car specialists. Tuning, engine building, restoration and hard to find parts.');
+
+INSERT INTO openingHours (label, hours, sortOrder) VALUES
+('Monday to Friday', '8:00am - 5:30pm', 1),
+('Saturday', '9:00am - 1:00pm', 2),
+('Sunday', 'Closed', 3);
+
 -- Sample data for the prototype.
 -- Everything here is invented for demonstration and gets replaced
 -- once the client supplies real services, photos, parts and reviews.
