@@ -1,70 +1,63 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api.js';
-import { useApi } from '../useApi.js';
-import { PageHeader, Thumb, Badge, Loader, Empty } from '../components/ui.jsx';
+import { useLoad } from '../useLoad.js';
+import Photo from '../components/Photo.jsx';
+import Loading from '../components/Loading.jsx';
 
 export default function Portfolio() {
-  const { data, loading } = useApi(() => api.projects(), []);
+  const { data, loading } = useLoad('/projects');
   const [filter, setFilter] = useState('All');
 
   const projects = data || [];
+
+  // Build the filter buttons from whatever categories exist in the data.
   const categories = ['All', ...new Set(projects.map((p) => p.category))];
   const shown = filter === 'All' ? projects : projects.filter((p) => p.category === filter);
 
   return (
     <>
-      <PageHeader
-        eyebrow="Portfolio"
-        title="Builds, restorations and success stories"
-        blurb="A selection of completed projects. Each one documented with the scope, the work carried out and the measurable result."
-      />
+      <section className="invert">
+        <div className="page" style={{ padding: '40px 24px' }}>
+          <p className="eyebrow muted">Portfolio</p>
+          <h1 style={{ marginTop: 12 }}>Builds and restorations</h1>
+        </div>
+      </section>
 
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        {loading ? (
-          <Loader />
-        ) : (
-          <>
-            <div className="mb-10 flex flex-wrap gap-2">
-              {categories.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setFilter(c)}
-                  className={`rounded-lg border px-4 py-2 text-sm transition ${
-                    filter === c
-                      ? 'border-accent bg-accent/10 text-accent'
-                      : 'border-edge text-muted hover:text-white'
-                  }`}
-                >
-                  {c}
-                </button>
+      <section className="section">
+        <div className="page">
+          <div className="row" style={{ marginBottom: 32 }}>
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setFilter(category)}
+                className={filter === category ? 'pill pill-on' : 'pill'}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <Loading />
+          ) : (
+            <div className="grid grid-3">
+              {shown.map((project) => (
+                <Link to={`/portfolio/${project.slug}`} key={project.id} className="card">
+                  <Photo name={project.title} />
+                  <div className="card-body">
+                    <div className="row" style={{ gap: 8 }}>
+                      <span className="badge badge-quiet">{project.category}</span>
+                      <span className="small muted">{project.duration}</span>
+                    </div>
+                    <h3 style={{ marginTop: 12 }}>{project.title}</h3>
+                    <p className="small muted" style={{ marginTop: 8 }}>{project.summary}</p>
+                  </div>
+                </Link>
               ))}
             </div>
-
-            {shown.length === 0 ? (
-              <Empty title="No projects in this category" />
-            ) : (
-              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                {shown.map((p) => (
-                  <Link key={p.id} to={`/portfolio/${p.slug}`} className="group">
-                    <Thumb label={p.title} seed={p.id} className="transition group-hover:opacity-80" />
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <Badge tone="accent">{p.category}</Badge>
-                      <Badge>{p.make}</Badge>
-                      <span className="text-xs text-muted">{p.duration}</span>
-                    </div>
-                    <h2 className="mt-2.5 text-lg font-semibold transition group-hover:text-accent">
-                      {p.title}
-                    </h2>
-                    <p className="mt-1.5 text-sm text-muted">{p.summary}</p>
-                    <p className="mt-3 text-sm font-medium text-accent">Read the build →</p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      </section>
     </>
   );
 }

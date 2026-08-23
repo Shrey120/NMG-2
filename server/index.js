@@ -1,260 +1,409 @@
 import express from 'express';
 import cors from 'cors';
-import { store, nextId, reset } from './store.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import './env.js';
+import { pool } from './db.js';
 
 const app = express();
 const PORT = process.env.PORT || 4100;
+const JWT_SECRET = process.env.JWT_SECRET || 'change-this-to-a-long-random-string';
 
 app.use(cors());
 app.use(express.json());
 
-// ---------------------------------------------------------------------------
-// Auth — PROTOTYPE ONLY.
-//
-// This is a hardcoded credential check that returns a static token. It exists
-// so the admin panel can be demonstrated. Before this goes anywhere near real
-// use it must be replaced with Supabase Auth (hashed passwords, real sessions,
-// row level security). Do not copy this pattern forward.
-// ---------------------------------------------------------------------------
-const DEMO_ADMIN = { email: 'admin@outlierautowerke.example', password: 'prototype' };
-const DEMO_TOKEN = 'prototype-admin-token';
+// Every route below is an async function. This wrapper catches any error
+// they throw so we do not need a try/catch block in each one.
+const route = (handler) => (req, res) =>
+  handler(req, res).catch((error) => {
+    console.error(error);
+    res.status(500).json({ error: 'Something went wrong' });
+  });
 
+// Checks the token sent by the admin panel. Runs before protected routes.
 function requireAdmin(req, res, next) {
-  const header = req.headers.authorization || '';
-  if (header.replace('Bearer ', '') !== DEMO_TOKEN) {
-    return res.status(401).json({ error: 'Not authorised' });
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Please sign in again' });
   }
-  next();
 }
 
-app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body || {};
-  if (email === DEMO_ADMIN.email && password === DEMO_ADMIN.password) {
-    return res.json({ token: DEMO_TOKEN, user: { email, role: 'ADMIN', name: 'Workshop Admin' } });
-  }
-  res.status(401).json({ error: 'Incorrect email or password' });
-});
+// ---------------------------------------------------------------------------
+// Login
+// ---------------------------------------------------------------------------
 
-// --- Public content -------------------------------------------------------
+app.post(
+  '/api/login',
+  route(async (req, res) => {
+    const { email, password } = req.body;
 
-app.get('/api/business', (_req, res) => res.json(store.business));
-app.get('/api/services', (_req, res) => res.json(store.services));
-app.get('/api/collaborations', (_req, res) => res.json(store.collaborations));
+    const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const user = users[0];
 
-app.get('/api/projects', (req, res) => {
-  const { make, category } = req.query;
-  let out = [...store.projects];
-  if (make) out = out.filter((p) => p.make === make);
-  if (category) out = out.filter((p) => p.category === category);
-  res.json(out);
-});
+    // Compare the typed password against the stored hash.
+    if (!user || !(await bcrypt.compare(password || '', user.passwordHash))) {
+      return res.status(401).json({ error: 'Incorrect email or password' });
+    }
 
-app.get('/api/projects/:slug', (req, res) => {
-  const project = store.projects.find((p) => p.slug === req.params.slug);
-  if (!project) return res.status(404).json({ error: 'Project not found' });
-  res.json(project);
-});
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+    res.json({ token, name: user.name });
+  })
+);
 
-app.get('/api/testimonials', (req, res) => {
-  const all = req.query.all === 'true';
-  res.json(all ? store.testimonials : store.testimonials.filter((t) => t.approved));
-});
+// ---------------------------------------------------------------------------
+// Services
+// ---------------------------------------------------------------------------
 
-// --- Marketplace ----------------------------------------------------------
+app.get(
+  '/api/services',
+  route(async (req, res) => {
+    const [services] = await pool.query('SELECT * FROM services ORDER BY sortOrder');
+    res.json(services);
+  })
+);
 
-app.get('/api/listings', (req, res) => {
-  const { q, category, make, condition, minPrice, maxPrice, sort, status } = req.query;
-  let out = [...store.listings];
+// ---------------------------------------------------------------------------
+// Portfolio projects
+// ---------------------------------------------------------------------------
 
-  if (q) {
-    const needle = q.toLowerCase();
-    out = out.filter((l) =>
-      [l.title, l.description, l.partNumber, l.fitment, l.category, l.make]
-        .join(' ')
-        .toLowerCase()
-        .includes(needle)
+app.get(
+  '/api/projects',
+  route(async (req, res) => {
+    const [projects] = await pool.query('SELECT * FROM projects ORDER BY `year` DESC, id');
+    res.json(projects);
+  })
+);
+
+app.get(
+  '/api/projects/:slug',
+  route(async (req, res) => {
+    const [projects] = await pool.query('SELECT * FROM projects WHERE slug = ?', [req.params.slug]);
+    if (projects.length === 0) return res.status(404).json({ error: 'Project not found' });
+
+    const [work] = await pool.query(
+      'SELECT description FROM projectWork WHERE projectId = ? ORDER BY id',
+      [projects[0].id]
     );
-  }
-  if (category) out = out.filter((l) => l.category === category);
-  if (make) out = out.filter((l) => l.make === make);
-  if (condition) out = out.filter((l) => l.condition === condition);
-  if (status) out = out.filter((l) => l.status === status);
-  if (minPrice) out = out.filter((l) => l.price >= Number(minPrice));
-  if (maxPrice) out = out.filter((l) => l.price <= Number(maxPrice));
 
-  if (sort === 'price-asc') out.sort((a, b) => a.price - b.price);
-  else if (sort === 'price-desc') out.sort((a, b) => b.price - a.price);
-  else out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    res.json({ ...projects[0], work: work.map((row) => row.description) });
+  })
+);
 
-  res.json({
-    items: out,
-    total: out.length,
-    facets: {
-      categories: [...new Set(store.listings.map((l) => l.category))].sort(),
-      makes: [...new Set(store.listings.map((l) => l.make))].sort(),
-      conditions: [...new Set(store.listings.map((l) => l.condition))].sort(),
-    },
-  });
-});
+// ---------------------------------------------------------------------------
+// Marketplace listings
+// ---------------------------------------------------------------------------
 
-app.get('/api/listings/:id', (req, res) => {
-  const listing = store.listings.find((l) => l.id === req.params.id);
-  if (!listing) return res.status(404).json({ error: 'Listing not found' });
-  res.json(listing);
-});
+// Only these three sort options are allowed. The value from the browser is
+// never put into the SQL directly, which stops anyone injecting their own.
+const SORT_OPTIONS = {
+  newest: 'createdAt DESC',
+  cheapest: 'price ASC',
+  dearest: 'price DESC',
+};
 
-app.post('/api/listings', requireAdmin, (req, res) => {
-  const listing = {
-    id: nextId('lst'),
-    status: 'available',
-    quantity: 1,
-    createdAt: new Date().toISOString().slice(0, 10),
-    ...req.body,
-    price: Number(req.body.price) || 0,
-  };
-  store.listings.unshift(listing);
-  res.status(201).json(listing);
-});
+app.get(
+  '/api/listings',
+  route(async (req, res) => {
+    const { search, category, make, sort } = req.query;
 
-app.put('/api/listings/:id', requireAdmin, (req, res) => {
-  const index = store.listings.findIndex((l) => l.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Listing not found' });
-  store.listings[index] = {
-    ...store.listings[index],
-    ...req.body,
-    id: store.listings[index].id,
-    price: Number(req.body.price ?? store.listings[index].price) || 0,
-  };
-  res.json(store.listings[index]);
-});
+    // Build the WHERE clause one condition at a time. Every value goes into
+    // the "values" array and is sent separately as a ? placeholder, so a
+    // search for "'; DROP TABLE" is treated as text, not as SQL.
+    const conditions = [];
+    const values = [];
 
-app.delete('/api/listings/:id', requireAdmin, (req, res) => {
-  const index = store.listings.findIndex((l) => l.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Listing not found' });
-  const [removed] = store.listings.splice(index, 1);
-  res.json(removed);
-});
+    if (search) {
+      conditions.push('(title LIKE ? OR description LIKE ? OR partNumber LIKE ? OR fitment LIKE ?)');
+      const like = `%${search}%`;
+      values.push(like, like, like, like);
+    }
+    if (category) {
+      conditions.push('category = ?');
+      values.push(category);
+    }
+    if (make) {
+      conditions.push('make = ?');
+      values.push(make);
+    }
 
-// --- Parts wanted / exchange ---------------------------------------------
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const orderBy = SORT_OPTIONS[sort] || SORT_OPTIONS.newest;
 
-app.get('/api/wanted', (_req, res) => res.json(store.wanted));
+    const [listings] = await pool.query(
+      `SELECT * FROM listings ${where} ORDER BY ${orderBy}`,
+      values
+    );
 
-app.post('/api/wanted', (req, res) => {
-  const post = {
-    id: nextId('wtd'),
-    isStaff: false,
-    status: 'open',
-    postedBy: req.body.postedBy || 'Site visitor',
-    contact: 'Via site enquiry',
-    createdAt: new Date().toISOString().slice(0, 10),
-    ...req.body,
-  };
-  store.wanted.unshift(post);
-  res.status(201).json(post);
-});
+    // The dropdown options on the filter sidebar.
+    const [categories] = await pool.query('SELECT DISTINCT category FROM listings ORDER BY category');
+    const [makes] = await pool.query('SELECT DISTINCT make FROM listings ORDER BY make');
 
-app.delete('/api/wanted/:id', requireAdmin, (req, res) => {
-  const index = store.wanted.findIndex((w) => w.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Post not found' });
-  res.json(store.wanted.splice(index, 1)[0]);
-});
+    res.json({
+      listings,
+      categories: categories.map((row) => row.category),
+      makes: makes.map((row) => row.make),
+    });
+  })
+);
 
-app.get('/api/exchanges', (_req, res) => res.json(store.exchanges));
+app.get(
+  '/api/listings/:id',
+  route(async (req, res) => {
+    const [listings] = await pool.query('SELECT * FROM listings WHERE id = ?', [req.params.id]);
+    if (listings.length === 0) return res.status(404).json({ error: 'Listing not found' });
+    res.json(listings[0]);
+  })
+);
 
-app.post('/api/exchanges', (req, res) => {
-  const post = {
-    id: nextId('exc'),
-    isStaff: false,
-    status: 'open',
-    postedBy: req.body.postedBy || 'Site visitor',
-    contact: 'Via site enquiry',
-    createdAt: new Date().toISOString().slice(0, 10),
-    ...req.body,
-  };
-  store.exchanges.unshift(post);
-  res.status(201).json(post);
-});
+app.post(
+  '/api/listings',
+  requireAdmin,
+  route(async (req, res) => {
+    const l = req.body;
+    const [result] = await pool.query(
+      `INSERT INTO listings
+       (title, category, make, fitment, partNumber, itemCondition, price, quantity, status, description, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())`,
+      [
+        l.title,
+        l.category,
+        l.make,
+        l.fitment,
+        l.partNumber,
+        l.itemCondition,
+        l.price,
+        l.quantity,
+        l.status,
+        l.description,
+      ]
+    );
+    res.status(201).json({ id: result.insertId });
+  })
+);
 
-app.delete('/api/exchanges/:id', requireAdmin, (req, res) => {
-  const index = store.exchanges.findIndex((e) => e.id === req.params.id);
-  if (index === -1) return res.status(404).json({ error: 'Post not found' });
-  res.json(store.exchanges.splice(index, 1)[0]);
-});
+app.put(
+  '/api/listings/:id',
+  requireAdmin,
+  route(async (req, res) => {
+    const l = req.body;
+    await pool.query(
+      `UPDATE listings SET
+       title = ?, category = ?, make = ?, fitment = ?, partNumber = ?,
+       itemCondition = ?, price = ?, quantity = ?, status = ?, description = ?
+       WHERE id = ?`,
+      [
+        l.title,
+        l.category,
+        l.make,
+        l.fitment,
+        l.partNumber,
+        l.itemCondition,
+        l.price,
+        l.quantity,
+        l.status,
+        l.description,
+        req.params.id,
+      ]
+    );
+    res.json({ ok: true });
+  })
+);
 
-// --- Enquiries ------------------------------------------------------------
+app.delete(
+  '/api/listings/:id',
+  requireAdmin,
+  route(async (req, res) => {
+    await pool.query('DELETE FROM listings WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  })
+);
 
-app.post('/api/enquiries', (req, res) => {
-  const enquiry = {
-    id: nextId('enq'),
-    status: 'new',
-    listingId: null,
-    createdAt: new Date().toISOString(),
-    ...req.body,
-  };
-  store.enquiries.unshift(enquiry);
-  // Real build: also send to the client's nominated address (question D2).
-  console.log(`[enquiry] ${enquiry.name} — ${enquiry.subject}`);
-  res.status(201).json({ ok: true, id: enquiry.id });
-});
+// ---------------------------------------------------------------------------
+// Parts wanted
+// ---------------------------------------------------------------------------
 
-app.get('/api/enquiries', requireAdmin, (_req, res) => res.json(store.enquiries));
+app.get(
+  '/api/wanted',
+  route(async (req, res) => {
+    const [posts] = await pool.query('SELECT * FROM wanted ORDER BY createdAt DESC');
+    res.json(posts);
+  })
+);
 
-app.patch('/api/enquiries/:id', requireAdmin, (req, res) => {
-  const enquiry = store.enquiries.find((e) => e.id === req.params.id);
-  if (!enquiry) return res.status(404).json({ error: 'Enquiry not found' });
-  Object.assign(enquiry, { status: req.body.status ?? enquiry.status });
-  res.json(enquiry);
-});
+app.post(
+  '/api/wanted',
+  route(async (req, res) => {
+    const p = req.body;
+    await pool.query(
+      `INSERT INTO wanted (title, make, postedBy, contact, budget, description, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, CURDATE())`,
+      [p.title, p.make || '', p.postedBy, 'Via site enquiry', p.budget || '', p.description]
+    );
+    res.status(201).json({ ok: true });
+  })
+);
 
-// --- Testimonial moderation ----------------------------------------------
+app.delete(
+  '/api/wanted/:id',
+  requireAdmin,
+  route(async (req, res) => {
+    await pool.query('DELETE FROM wanted WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  })
+);
 
-app.post('/api/testimonials', (req, res) => {
-  const testimonial = {
-    id: nextId('tst'),
-    approved: false,
-    rating: Number(req.body.rating) || 5,
-    date: new Date().toISOString().slice(0, 10),
-    ...req.body,
-  };
-  store.testimonials.push(testimonial);
-  res.status(201).json({ ok: true });
-});
+// ---------------------------------------------------------------------------
+// Parts exchange
+// ---------------------------------------------------------------------------
 
-app.patch('/api/testimonials/:id', requireAdmin, (req, res) => {
-  const testimonial = store.testimonials.find((t) => t.id === req.params.id);
-  if (!testimonial) return res.status(404).json({ error: 'Testimonial not found' });
-  testimonial.approved = Boolean(req.body.approved);
-  res.json(testimonial);
-});
+app.get(
+  '/api/exchanges',
+  route(async (req, res) => {
+    const [posts] = await pool.query('SELECT * FROM exchanges ORDER BY createdAt DESC');
+    res.json(posts);
+  })
+);
 
-// --- Admin dashboard ------------------------------------------------------
+app.post(
+  '/api/exchanges',
+  route(async (req, res) => {
+    const p = req.body;
+    await pool.query(
+      `INSERT INTO exchanges (title, make, postedBy, contact, offering, wanting, description, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())`,
+      [p.title, p.make || '', p.postedBy, 'Via site enquiry', p.offering, p.wanting, p.description || '']
+    );
+    res.status(201).json({ ok: true });
+  })
+);
 
-app.get('/api/admin/stats', requireAdmin, (_req, res) => {
-  res.json({
-    listings: {
-      total: store.listings.length,
-      available: store.listings.filter((l) => l.status === 'available').length,
-      sold: store.listings.filter((l) => l.status === 'sold').length,
-      value: store.listings
-        .filter((l) => l.status === 'available')
-        .reduce((sum, l) => sum + l.price * l.quantity, 0),
-    },
-    enquiries: {
-      total: store.enquiries.length,
-      unread: store.enquiries.filter((e) => e.status === 'new').length,
-    },
-    wanted: store.wanted.filter((w) => w.status === 'open').length,
-    exchanges: store.exchanges.filter((e) => e.status === 'open').length,
-    projects: store.projects.length,
-    pendingTestimonials: store.testimonials.filter((t) => !t.approved).length,
-  });
-});
+app.delete(
+  '/api/exchanges/:id',
+  requireAdmin,
+  route(async (req, res) => {
+    await pool.query('DELETE FROM exchanges WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  })
+);
 
-app.post('/api/admin/reset', requireAdmin, (_req, res) => {
-  reset();
-  res.json({ ok: true, message: 'Sample data restored' });
-});
+// ---------------------------------------------------------------------------
+// Testimonials
+// ---------------------------------------------------------------------------
+
+app.get(
+  '/api/testimonials',
+  route(async (req, res) => {
+    // The admin panel asks for every review; the public site only gets
+    // the approved ones.
+    const showAll = req.query.all === 'true';
+    const [testimonials] = await pool.query(
+      showAll
+        ? 'SELECT * FROM testimonials ORDER BY createdAt DESC'
+        : 'SELECT * FROM testimonials WHERE approved = 1 ORDER BY createdAt DESC'
+    );
+    res.json(testimonials);
+  })
+);
+
+app.patch(
+  '/api/testimonials/:id',
+  requireAdmin,
+  route(async (req, res) => {
+    await pool.query('UPDATE testimonials SET approved = ? WHERE id = ?', [
+      req.body.approved ? 1 : 0,
+      req.params.id,
+    ]);
+    res.json({ ok: true });
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Enquiries
+// ---------------------------------------------------------------------------
+
+app.post(
+  '/api/enquiries',
+  route(async (req, res) => {
+    const e = req.body;
+    await pool.query(
+      `INSERT INTO enquiries (type, name, email, phone, vehicle, subject, message, listingId)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        e.type || 'General',
+        e.name,
+        e.email,
+        e.phone || '',
+        e.vehicle || '',
+        e.subject,
+        e.message,
+        e.listingId || null,
+      ]
+    );
+    res.status(201).json({ ok: true });
+  })
+);
+
+app.get(
+  '/api/enquiries',
+  requireAdmin,
+  route(async (req, res) => {
+    const [enquiries] = await pool.query('SELECT * FROM enquiries ORDER BY createdAt DESC');
+    res.json(enquiries);
+  })
+);
+
+app.patch(
+  '/api/enquiries/:id',
+  requireAdmin,
+  route(async (req, res) => {
+    await pool.query('UPDATE enquiries SET status = ? WHERE id = ?', [
+      req.body.status,
+      req.params.id,
+    ]);
+    res.json({ ok: true });
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Admin dashboard counts
+// ---------------------------------------------------------------------------
+
+app.get(
+  '/api/stats',
+  requireAdmin,
+  route(async (req, res) => {
+    // COUNT and SUM are done by MySQL rather than by loading every row
+    // into Node and counting there.
+    const [[listings]] = await pool.query(
+      `SELECT COUNT(*) AS total,
+              SUM(status = 'available') AS available,
+              SUM(CASE WHEN status = 'available' THEN price * quantity ELSE 0 END) AS stockValue
+       FROM listings`
+    );
+    const [[enquiries]] = await pool.query(
+      `SELECT COUNT(*) AS total, SUM(status = 'new') AS unread FROM enquiries`
+    );
+    const [[wanted]] = await pool.query('SELECT COUNT(*) AS total FROM wanted');
+    const [[exchanges]] = await pool.query('SELECT COUNT(*) AS total FROM exchanges');
+    const [[pending]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM testimonials WHERE approved = 0'
+    );
+
+    res.json({
+      listings: Number(listings.total),
+      available: Number(listings.available),
+      stockValue: Number(listings.stockValue),
+      enquiries: Number(enquiries.total),
+      unread: Number(enquiries.unread),
+      posts: Number(wanted.total) + Number(exchanges.total),
+      pendingReviews: Number(pending.total),
+    });
+  })
+);
 
 app.listen(PORT, () => {
-  console.log(`Outlier Autowerke API (prototype) → http://localhost:${PORT}`);
+  console.log(`API running on http://localhost:${PORT}`);
 });

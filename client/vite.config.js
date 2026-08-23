@@ -1,13 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   server: {
     port: 5173,
-    proxy: {
-      '/api': 'http://localhost:4100',
-    },
+    // Sends any request starting with /api to the Express server,
+    // so the browser only ever talks to one address.
+    proxy: { '/api': 'http://localhost:4100' },
   },
 });

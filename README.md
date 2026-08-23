@@ -1,107 +1,167 @@
-# Outlier Autowerke — Digital Presence & Marketplace Website
+# Outlier Autowerke
 
-Prototype for the industry project *Digital Presence and Marketplace Website for
-Outlier Autowerke*.
+Website and parts marketplace for Outlier Autowerke, built for the industry
+project *Digital Presence and Marketplace Website*.
 
-> **This is a prototype.** Every service, project, part, review and enquiry in
-> the app is invented sample data. None of it came from the client. A dismissible
-> banner says so on every page.
+> **Prototype.** All services, projects, parts, reviews and enquiries in the
+> database are invented sample data. A banner on every page says so.
 
-## Running it
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Frontend | React 18, React Router, Vite |
+| Styling | Plain CSS (`client/src/styles.css`), black and white only |
+| Backend | Node.js with Express |
+| Database | **MySQL 8** |
+| Database access | `mysql2` driver with hand written SQL |
+| Passwords | `bcryptjs` (hashed, never stored as text) |
+| Login sessions | `jsonwebtoken` |
+
+There is no ORM and no CSS framework. Every query and every style rule is
+written out, so anything on screen can be traced to the line that produced it.
+
+## Getting it running
+
+**1. You need a MySQL server.** Either install MySQL locally, or run one in
+Docker:
 
 ```bash
-npm run install:all   # installs root, server and client dependencies
-npm run dev           # starts both, or use the two scripts separately
+docker run --name oa-mysql -e MYSQL_ROOT_PASSWORD=rootpass -p 3307:3306 -d mysql:8
 ```
 
-| | URL |
+**2. Install dependencies**
+
+```bash
+npm run setup
+```
+
+**3. Add your database details**
+
+```bash
+cp server/.env.example server/.env
+```
+
+Then edit `server/.env`. For the Docker command above, set `DB_PORT=3307`,
+`DB_USER=root` and `DB_PASSWORD=rootpass`. For a normal local MySQL, port 3306
+and your own root password.
+
+**4. Create the tables and load the sample data**
+
+```bash
+npm run db:setup
+```
+
+This drops and recreates every table, so running it again is how you reset the
+data to a clean state.
+
+**5. Start it**
+
+```bash
+npm run dev
+```
+
+| | Address |
 |---|---|
 | Website | http://localhost:5173 |
 | API | http://localhost:4100 |
 
-Vite proxies `/api` to the Express server, so only the first URL is needed in a
-browser. Port 4100 was chosen because 4000 was already in use during development
-— override with `PORT=xxxx npm run dev:server` if it clashes.
+Vite forwards anything starting with `/api` to the Express server, so the
+browser only ever talks to one address.
 
 ### Admin panel
 
-Sign in at `/admin`:
+Go to `/admin` and sign in with the account created by `npm run db:setup`:
 
 ```
-admin@outlierautowerke.example
-prototype
+admin@outlierautowerke.com
+admin1234
 ```
 
-Data lives in memory and resets when the server restarts. There is also a
-**Restore sample data** button on the admin dashboard.
+Change these in `server/.env` before running the setup script if you want
+different details.
 
-## Stack
-
-| Layer | Choice | Notes |
-|---|---|---|
-| Frontend | React 18 + Vite + React Router | |
-| Styling | Tailwind CSS v4 | Theme tokens in `client/src/index.css` |
-| Backend | Node + Express | ES modules |
-| Data | In-memory store | `server/store.js`, seeded from `server/data/seed.js` |
-
-**Database is not wired up yet — deliberately.** The plan is Supabase (Postgres)
-with Prisma. `server/store.js` is the single file that touches data, so swapping
-in real queries should not require changes to the route handlers.
-
-## What the prototype covers
-
-| Requirement | Where | Status |
-|---|---|---|
-| Responsive business website | all pages | Done |
-| Service pages | `/services` | Done |
-| Portfolio / success stories | `/portfolio`, `/portfolio/:slug` | Done |
-| Collaboration page | `/collaborate` | Done |
-| Marketplace listings | `/marketplace`, `/marketplace/:id` | Listing + enquiry, no payments |
-| Search & browse | `/marketplace` | Text search, 4 filters, 3 sorts |
-| Parts Wanted | `/parts-wanted` | Public posting |
-| Parts Exchange | `/parts-exchange` | Noticeboard model |
-| Contact & enquiry form | `/contact` | 4 enquiry types |
-| Admin panel | `/admin/*` | Listings CRUD, enquiries, posts, testimonials |
-| Sign in / login | `/admin` | Staff only so far |
-| Testing | — | Not started |
-| User documentation | — | Not started |
-
-## Assumptions baked into this prototype
-
-These are guesses, made so the build could start before the client answers
-Round 1. Each maps to a question in
-[docs/round-1-client-questions.md](docs/round-1-client-questions.md), and each is
-cheap to change:
-
-- **No online payments.** Marketplace is listing-and-enquiry (question A1).
-- **Staff-only listings.** Customers browse and enquire, they do not sell (A3).
-- **Exchange is a noticeboard.** Post what you have and want, arrange it
-  yourselves — no in-site offer/accept flow (B2).
-- **No customer accounts.** Only staff log in; Wanted and Exchange posts are open
-  to anyone (C1).
-- **Enquiries are stored, not emailed.** No mail provider wired up (D2).
-- **Placeholder images throughout.** Generated locally from the item name so the
-  app needs no network and no image licences (H2).
-
-## Known gaps
-
-- Auth is a hardcoded credential returning a static token. Prototype only —
-  see the comment block in `server/index.js`. Supabase Auth replaces it.
-- No persistence: restarting the server discards changes.
-- No tests, no image upload, no email delivery, no payments.
-- Business details, ABN, hours and pricing are placeholders (J1).
-
-## Layout
+## Project layout
 
 ```
-server/           Express API
-  data/seed.js    all sample data — replace with client content
-  store.js        in-memory store; the seam where Supabase plugs in
-  index.js        routes
+server/
+  index.js          all API routes
+  db.js             MySQL connection pool
+  env.js            loads .env from the server folder
+  sql/schema.sql    CREATE TABLE statements
+  sql/seed.sql      sample data
+  sql/setup.js      runs the two .sql files and creates the admin user
+
 client/src/
-  pages/          public pages
-  pages/admin/    admin panel
-  components/     Layout, shared UI
-  api.js          typed-ish API client
-docs/             Round 1 client questions
+  App.jsx           every route in one file
+  api.js            get / post / put / patch / remove helpers
+  useLoad.js        loads data when a page opens
+  styles.css        the whole design system
+  pages/            one file per page
+  pages/admin/      the admin panel
+  components/       header, footer, placeholder image, spinner
 ```
+
+## Database tables
+
+| Table | Holds |
+|---|---|
+| `users` | staff logins for the admin panel |
+| `services` | the workshop service list |
+| `projects` | portfolio builds |
+| `projectWork` | bullet points belonging to a project (one to many) |
+| `listings` | parts for sale |
+| `wanted` | parts wanted posts |
+| `exchanges` | parts swap posts |
+| `testimonials` | customer reviews, hidden until approved |
+| `enquiries` | contact form submissions, linked to a listing when relevant |
+
+Column names are camelCase so a row from MySQL can be sent straight to React
+as JSON without renaming anything in between.
+
+## Notes on the code
+
+- **SQL injection.** Every value from the browser is passed as a `?`
+  placeholder, never joined into the SQL string. Sort order is picked from a
+  fixed list (`SORT_OPTIONS` in `server/index.js`) for the same reason.
+- **Passwords.** Stored as a bcrypt hash. Login hashes the attempt and compares.
+- **Login sessions.** Signing in returns a JSON Web Token, kept in
+  `localStorage` and sent as an `Authorization` header on admin requests.
+- **Counting.** Dashboard totals are done with `COUNT` and `SUM` in MySQL
+  rather than loading every row into Node.
+
+## What this covers
+
+| Client requirement | Where |
+|---|---|
+| Responsive business website | every page |
+| Service pages | `/services` |
+| Portfolio and success stories | `/portfolio` |
+| Collaboration page | `/collaborate` |
+| Parts marketplace | `/marketplace` |
+| Search and browse listings | `/marketplace` - search, two filters, three sorts |
+| Parts Wanted | `/wanted` |
+| Parts Exchange | `/exchange` |
+| Contact and enquiry form | `/contact` |
+| Admin panel | `/admin` |
+| Sign in | `/admin` - staff accounts |
+
+## Still to do
+
+- Automated tests
+- Image upload (photos are placeholders generated from the item name)
+- Sending enquiry emails (they are stored in the database only)
+- User documentation
+- Deployment
+
+## Assumptions
+
+Made so the build could start before the client answered our Round 1
+questions. Each is small to change. See
+[docs/round-1-client-questions.md](docs/round-1-client-questions.md).
+
+- No online payments; the marketplace is listing and enquiry only (A1)
+- Only staff create listings; customers browse and enquire (A3)
+- Exchange is a noticeboard rather than an in-site offer system (B2)
+- No customer accounts; only staff sign in (C1)
+- Enquiries are stored in the database, not emailed (D2)

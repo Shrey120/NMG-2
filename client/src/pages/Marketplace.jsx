@@ -1,166 +1,142 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, money } from '../api.js';
-import { useApi } from '../useApi.js';
-import { PageHeader, Thumb, Badge, StatusPill, Loader, Empty, Button } from '../components/ui.jsx';
-
-const BLANK = { q: '', category: '', make: '', condition: '', maxPrice: '', sort: 'newest' };
+import { useLoad } from '../useLoad.js';
+import { money } from '../api.js';
+import Photo from '../components/Photo.jsx';
+import Loading from '../components/Loading.jsx';
 
 export default function Marketplace() {
-  const [filters, setFilters] = useState(BLANK);
-  const [draft, setDraft] = useState('');
+  const [search, setSearch] = useState('');
+  const [typed, setTyped] = useState('');
+  const [category, setCategory] = useState('');
+  const [make, setMake] = useState('');
+  const [sort, setSort] = useState('newest');
 
-  const { data, loading } = useApi(() => api.listings(filters), [JSON.stringify(filters)]);
-  const items = data?.items || [];
-  const facets = data?.facets || { categories: [], makes: [], conditions: [] };
+  // The filters become the query string, so changing one reloads the data.
+  const query = new URLSearchParams({ search, category, make, sort }).toString();
+  const { data, loading } = useLoad(`/listings?${query}`);
 
-  const set = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
-  const active = Object.entries(filters).filter(([k, v]) => v && k !== 'sort').length;
+  const listings = data?.listings || [];
+
+  function clearAll() {
+    setSearch('');
+    setTyped('');
+    setCategory('');
+    setMake('');
+    setSort('newest');
+  }
 
   return (
     <>
-      <PageHeader
-        eyebrow="Marketplace"
-        title="Parts for sale"
-        blurb="OEM, NOS and performance parts from the workshop's rotating stock. Enquire on anything here and we will confirm availability and freight."
-      >
-        <form
-          className="mt-8 flex max-w-xl gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            set('q', draft);
-          }}
-        >
-          <input
-            className="field"
-            placeholder="Search parts, part numbers, fitment…"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-          <Button type="submit">Search</Button>
-        </form>
-      </PageHeader>
+      <section className="invert">
+        <div className="page" style={{ padding: '40px 24px' }}>
+          <p className="eyebrow muted">Marketplace</p>
+          <h1 style={{ marginTop: 12 }}>Parts for sale</h1>
 
-      <div className="mx-auto max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:flex">
-        {/* Filters */}
-        <aside className="mb-8 lg:mb-0 lg:w-64 lg:shrink-0">
-          <div className="panel sticky top-24 p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Filters</h2>
-              {active > 0 && (
-                <button
-                  onClick={() => {
-                    setFilters(BLANK);
-                    setDraft('');
-                  }}
-                  className="text-xs text-accent hover:underline"
-                >
-                  Clear ({active})
-                </button>
-              )}
-            </div>
+          <form
+            className="row"
+            style={{ marginTop: 24, maxWidth: 520, flexWrap: 'nowrap' }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSearch(typed);
+            }}
+          >
+            <input
+              className="input"
+              placeholder="Search parts, part numbers, fitment"
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              aria-label="Search parts"
+            />
+            <button type="submit" className="btn">Search</button>
+          </form>
+        </div>
+      </section>
 
-            <div className="space-y-4">
-              {[
-                ['category', 'Category', facets.categories],
-                ['make', 'Marque', facets.makes],
-                ['condition', 'Condition', facets.conditions],
-              ].map(([key, label, options]) => (
-                <label key={key} className="block">
-                  <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
-                    {label}
-                  </span>
-                  <select className="field" value={filters[key]} onChange={(e) => set(key, e.target.value)}>
-                    <option value="">All</option>
-                    {options.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
+      <section className="section">
+        <div className="page">
+          <div className="with-filters">
+            {/* Filters */}
+            <aside className="card card-body">
+              <div className="between" style={{ alignItems: 'center' }}>
+                <h3 style={{ fontSize: '0.95rem' }}>Filters</h3>
+                <button className="link-button small" onClick={clearAll}>Clear</button>
+              </div>
+
+              <div className="stack" style={{ marginTop: 16 }}>
+                <div>
+                  <label className="label" htmlFor="f-category">Category</label>
+                  <select id="f-category" className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
+                    <option value="">All categories</option>
+                    {(data?.categories || []).map((option) => (
+                      <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
-                </label>
-              ))}
+                </div>
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
-                  Max price
-                </span>
-                <input
-                  type="number"
-                  className="field"
-                  placeholder="Any"
-                  value={filters.maxPrice}
-                  onChange={(e) => set('maxPrice', e.target.value)}
-                />
-              </label>
+                <div>
+                  <label className="label" htmlFor="f-make">Marque</label>
+                  <select id="f-make" className="input" value={make} onChange={(e) => setMake(e.target.value)}>
+                    <option value="">All marques</option>
+                    {(data?.makes || []).map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">Sort</span>
-                <select className="field" value={filters.sort} onChange={(e) => set('sort', e.target.value)}>
-                  <option value="newest">Newest first</option>
-                  <option value="price-asc">Price: low to high</option>
-                  <option value="price-desc">Price: high to low</option>
-                </select>
-              </label>
+                <div>
+                  <label className="label" htmlFor="f-sort">Sort by</label>
+                  <select id="f-sort" className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
+                    <option value="newest">Newest first</option>
+                    <option value="cheapest">Price: low to high</option>
+                    <option value="dearest">Price: high to low</option>
+                  </select>
+                </div>
+              </div>
+            </aside>
+
+            {/* Results */}
+            <div>
+              <p className="small muted" style={{ marginBottom: 16 }}>
+                {loading ? 'Searching...' : `${listings.length} part${listings.length === 1 ? '' : 's'} found`}
+              </p>
+
+              {loading ? (
+                <Loading />
+              ) : listings.length === 0 ? (
+                <div className="empty">
+                  <h3>No parts match that search</h3>
+                  <p className="small muted" style={{ marginTop: 8 }}>
+                    Try removing a filter, or post what you are chasing in Parts Wanted.
+                  </p>
+                  <Link to="/wanted" className="btn btn-outline" style={{ marginTop: 20 }}>
+                    Post a wanted ad
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-3">
+                  {listings.map((listing) => (
+                    <Link to={`/marketplace/${listing.id}`} key={listing.id} className="card">
+                      <Photo name={listing.title} />
+                      <div className="card-body">
+                        <div className="between" style={{ alignItems: 'center', gap: 8 }}>
+                          <span className="small muted">{listing.category}</span>
+                          {listing.status !== 'available' && (
+                            <span className="badge badge-solid">{listing.status}</span>
+                          )}
+                        </div>
+                        <h3 style={{ fontSize: '0.95rem', marginTop: 8 }}>{listing.title}</h3>
+                        <p className="small muted" style={{ marginTop: 6 }}>{listing.fitment}</p>
+                        <p className="mono" style={{ marginTop: 12, fontWeight: 700 }}>{money(listing.price)}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        </aside>
-
-        {/* Results */}
-        <div className="flex-1">
-          <p className="mb-5 text-sm text-muted">
-            {loading ? 'Searching…' : `${items.length} ${items.length === 1 ? 'part' : 'parts'} found`}
-            {filters.q && <> for “{filters.q}”</>}
-          </p>
-
-          {loading ? (
-            <Loader />
-          ) : items.length === 0 ? (
-            <Empty
-              title="No parts match that search"
-              blurb="Try removing a filter, or post what you are chasing in Parts Wanted and we will keep an eye out."
-              action={
-                <Button as="link" to="/parts-wanted" variant="ghost">
-                  Post a wanted ad
-                </Button>
-              }
-            />
-          ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {items.map((l) => (
-                <Link
-                  key={l.id}
-                  to={`/marketplace/${l.id}`}
-                  className="panel group flex flex-col overflow-hidden transition hover:border-accent/50"
-                >
-                  <Thumb
-                    label={l.title}
-                    seed={l.id}
-                    ratio="aspect-[5/3]"
-                    className="rounded-none border-0 border-b"
-                  />
-                  <div className="flex flex-1 flex-col p-4">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-[11px] uppercase tracking-wider text-muted">
-                        {l.category}
-                      </span>
-                      <StatusPill status={l.status} />
-                    </div>
-                    <h2 className="line-clamp-2 text-sm font-semibold transition group-hover:text-accent">
-                      {l.title}
-                    </h2>
-                    <p className="mt-1.5 line-clamp-2 text-xs text-muted">{l.fitment}</p>
-                    <div className="mt-auto flex items-end justify-between pt-4">
-                      <span className="font-mono text-lg font-bold text-accent">{money(l.price)}</span>
-                      <Badge>{l.condition}</Badge>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
         </div>
-      </div>
+      </section>
     </>
   );
 }

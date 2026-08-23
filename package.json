@@ -1,13 +1,13 @@
 {
   "name": "outlier-autowerke",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Digital Presence and Marketplace Website for Outlier Autowerke - prototype",
   "scripts": {
-    "dev": "concurrently -n server,client -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:server": "npm --prefix server run dev",
-    "dev:client": "npm --prefix client run dev",
-    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm --prefix server run dev",
+    "dev:web": "npm --prefix client run dev",
+    "setup": "npm install && npm --prefix server install && npm --prefix client install",
+    "db:setup": "npm --prefix server run db:setup",
     "build": "npm --prefix client run build"
   },
   "devDependencies": {

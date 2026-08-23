@@ -36,43 +36,64 @@ Resetting: admin dashboard has a **Restore sample data** button.
 
 | Layer | Choice | Why (say this) |
 |---|---|---|
-| Frontend | **React 18** | Component reuse — one listing card renders on home, marketplace and search results. Client-side routing gives an app-like feel for the marketplace. |
-| Build | **Vite** | Fast dev server with hot reload; production build is 70KB gzipped. |
-| Styling | **Tailwind CSS v4** | Design tokens defined once in `index.css`, so brand colours change in one place when the client supplies real branding. Responsive breakpoints are built in — directly serves the "responsive" requirement. |
-| Routing | **React Router v6** | 21 routes including nested, protected admin routes. |
-| Backend | **Node.js + Express** | One language across the whole stack. REST API keeps presentation and data separate, so a mobile app or a redesign could reuse the same endpoints. 25 endpoints so far. |
-| Database | **PostgreSQL via Supabase** *(planned)* | See below. |
-| ORM | **Prisma** *(planned)* | Type-safe queries; `schema.prisma` doubles as data-model documentation for the report; migrations are versioned in git as evidence of process. |
-| Auth | **Supabase Auth** *(planned)* | Currently a hardcoded prototype credential — flagged in code as must-replace. |
-| Images | **Supabase Storage** *(planned)* | Currently locally-generated placeholders. |
-| Hosting | Vercel (client) + Render (API) + Supabase (DB) | All free tiers. |
+| Frontend | **React 18** | Component reuse - the same card markup renders on home, portfolio and marketplace. Client side routing gives an app-like feel for the marketplace. |
+| Build | **Vite** | Fast dev server with hot reload; production build is around 65KB gzipped. |
+| Styling | **Plain CSS** | One stylesheet with CSS variables at the top. No framework, so every rule on screen can be traced to the line that wrote it. Colours change in one place. |
+| Routing | **React Router v6** | Public routes plus protected admin routes. |
+| Backend | **Node.js + Express** | One language across the whole stack. A REST API keeps presentation separate from data, so a mobile app or a redesign could reuse the same endpoints. |
+| Database | **MySQL 8** | See below. |
+| Database access | **mysql2 driver, hand written SQL** | No ORM. The SQL is visible in the route that runs it, which makes it explainable and keeps the query count obvious. |
+| Passwords | **bcryptjs** | Stored as a hash, never as text. |
+| Sessions | **jsonwebtoken** | Signing in returns a token that is sent with each admin request. |
 
-### Why Postgres and not MongoDB
+### Why MySQL
 
-The data is genuinely relational:
+The data is relational, and the schema shows it:
 
-- a listing belongs to a seller, a category and a vehicle fitment
-- an exchange links **two** listings and **two** users — a many-to-many join
-- an enquiry optionally references a listing and optionally a user
+- a listing belongs to a category and a marque, and an enquiry can point at a listing
+- a project has many work items, which is a real one-to-many with a foreign key
+- an exchange records what someone has and what they want
 
-Plus "Search & Browse for Parts" is an explicit client requirement, and Postgres
-gives full-text search and composite indexes natively. MongoDB would mean
-denormalising and `$lookup` on nearly every query.
+Nine tables with foreign keys and indexes. Joins, `COUNT`, `SUM` and `DISTINCT`
+are all done by the database rather than in JavaScript.
 
-### Why Supabase specifically
+### If asked why no ORM
 
-Postgres, auth, and file storage in one free service — file storage matters
-because the portfolio is photo-heavy. Express still sits in front of it so the
-Node API layer is real work, not a thin wrapper. Row Level Security will be on.
+Deliberate. Writing the SQL by hand means there is no generated layer to explain,
+the number of queries per request is obvious, and it demonstrates the SQL the unit
+is assessing. The trade off is more typing and no compile time checking of column
+names, which an ORM would give.
+
+### If asked about the camelCase column names
+
+Also deliberate, and the one convention we broke. MySQL columns are normally
+snake_case. Using camelCase means a row from MySQL is already in the shape React
+expects, so there is no renaming step between the database and the browser. The
+cost is that it looks unusual to a DBA.
+
+### Security points worth raising unprompted
+
+- Every value from the browser goes in as a `?` placeholder, never joined into
+  the SQL string. Demonstrate it: search the marketplace for `'; DROP TABLE
+  listings; --` and show that it returns nothing and breaks nothing.
+- Sort order cannot be a placeholder, so it is looked up in a fixed list rather
+  than taken from the URL.
+- Database credentials live in `server/.env`, which is gitignored.
+  `server/.env.example` is committed as a template.
 
 ## 4. Where the project stands
 
 Built and working:
 
-- 22 React components/pages, 25 API endpoints, ~3,600 lines (incl. 750 lines of sample data)
-- Public: home, services, portfolio + detail, marketplace + detail with search/filter/sort, parts wanted, parts exchange, collaborate, contact, 404
-- Admin: login, dashboard, listings CRUD, enquiry inbox with status workflow, post moderation, testimonial approval queue
-- Verified: production build clean, API smoke-tested, screenshotted at desktop and mobile widths
+- 26 React files, 21 API endpoints, 9 MySQL tables
+- Public: home, services, portfolio + project detail, marketplace with search,
+  filters and sorting, listing detail, parts wanted, parts exchange, collaborate,
+  contact, 404
+- Admin: login, dashboard, listings create/edit/delete, enquiry inbox with a
+  status workflow, post moderation, testimonial approval
+- Verified: schema and seed load into MySQL 8, all endpoints tested including
+  auth rejection and an injection attempt, production build clean, screenshots
+  checked at desktop and mobile widths
 
 Not started: database, real auth, tests, image upload, email delivery, user documentation.
 
@@ -90,8 +111,8 @@ Each maps to a Round 1 question and each is cheap to reverse:
 
 ## 6. Questions to ask the tutor
 
-1. **Have any Round 1 client answers come back yet?** Payments (A1) and who can post listings (A3) change the data model, so we want them before writing the Prisma schema.
-2. **Is Supabase acceptable, or is a self-hosted Postgres expected?** Some units require the DB to be locally reproducible for marking.
+1. **Have any Round 1 client answers come back yet?** Payments (A1) and who can post listings (A3) change the data model, so we want them before we finalise the MySQL schema.
+2. **Is a Docker MySQL acceptable for marking, or does it need a local install?** We develop against MySQL 8 in Docker so the setup is reproducible.
 3. **SEO** — we built a client-rendered SPA. For a business marketing site, search visibility matters and an SPA is weaker there. Should we prerender the marketing pages, or is it out of scope for assessment?
 4. **Testing expectations** — what depth is required? We plan Vitest + React Testing Library for components and Supertest for API routes.
 5. **Deployment** — does it need to be publicly hosted for marking, or is a local demo enough?

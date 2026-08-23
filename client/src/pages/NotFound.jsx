@@ -1,16 +1,11 @@
-import { Button } from '../components/ui.jsx';
+import { Link } from 'react-router-dom';
 
 export default function NotFound() {
   return (
-    <div className="mx-auto grid max-w-xl place-items-center px-4 py-32 text-center">
-      <p className="font-mono text-6xl font-black text-edge">404</p>
-      <h1 className="mt-4 text-2xl font-bold">Page not found</h1>
-      <p className="mt-3 text-muted">
-        That page does not exist. It may have been moved, or the link may be out of date.
-      </p>
-      <Button as="link" to="/" className="mt-8">
-        Back to home
-      </Button>
+    <div className="page section center">
+      <h1>404</h1>
+      <p className="muted" style={{ marginTop: 12 }}>That page does not exist.</p>
+      <Link to="/" className="btn" style={{ marginTop: 24 }}>Back to home</Link>
     </div>
   );
 }
