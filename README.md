@@ -69,17 +69,22 @@ npm run dev
 Vite forwards anything starting with `/api` to the Express server, so the
 browser only ever talks to one address.
 
+Enquiries are emailed as well as shown on the dashboard. Until the client gives
+us a mail account, `MAIL_HOST` is left blank in `server/.env` and the email is
+printed to the terminal instead of sent.
+
 ### Admin panel
 
-Go to `/admin` and sign in with the account created by `npm run db:setup`:
+`npm run db:setup` creates one account per role. Sign in at `/signin`.
 
-```
-admin@outlierautowerke.com
-admin1234
-```
+| Role | Sign in | Can do |
+|---|---|---|
+| Administrator | `admin@outlierautowerke.com` / `admin1234` | Everything, including editing services and portfolio projects |
+| Staff | `staff@outlierautowerke.com` / `staff1234` | Listings, enquiries, bookings, swap offers, moderation |
+| Customer | `daniel@example.com` / `customer1234` | Make swap offers, post wanted ads, book services |
 
-Change these in `server/.env` before running the setup script if you want
-different details.
+Change the administrator details in `server/.env` before running the setup
+script if you want different ones.
 
 ## Project layout
 
@@ -106,15 +111,18 @@ client/src/
 
 | Table | Holds |
 |---|---|
-| `users` | staff logins for the admin panel |
-| `services` | the workshop service list |
+| `users` | accounts, with a role of CUSTOMER, STAFF or ADMIN |
+| `services` | the workshop service list, and whether each can be booked online |
 | `projects` | portfolio builds |
 | `projectWork` | bullet points belonging to a project (one to many) |
 | `listings` | parts for sale |
-| `wanted` | parts wanted posts |
-| `exchanges` | parts swap posts |
+| `wanted` | parts wanted posts, hidden until staff approve them |
+| `exchanges` | parts the workshop will swap |
+| `exchangeOffers` | a specific swap a customer has proposed |
+| `offerMessages` | the back and forth negotiation on one offer |
 | `testimonials` | customer reviews, hidden until approved |
-| `enquiries` | contact form submissions, linked to a listing when relevant |
+| `enquiries` | contact form submissions, with an optional photo |
+| `bookings` | service bookings, which guests can make without an account |
 
 Column names are camelCase so a row from MySQL can be sent straight to React
 as JSON without renaming anything in between.
@@ -136,32 +144,40 @@ as JSON without renaming anything in between.
 |---|---|
 | Responsive business website | every page |
 | Service pages | `/services` |
+| Book a service online | `/book`, open to guests |
 | Portfolio and success stories | `/portfolio` |
 | Collaboration page | `/collaborate` |
-| Parts marketplace | `/marketplace` |
-| Search and browse listings | `/marketplace` - search, two filters, three sorts |
-| Parts Wanted | `/wanted` |
-| Parts Exchange | `/exchange` |
-| Contact and enquiry form | `/contact` |
-| Admin panel | `/admin` |
-| Sign in | `/admin` - staff accounts |
+| Parts marketplace, no online payment | `/marketplace` |
+| Search and browse listings | `/marketplace` - search, two filters, three sorts, paged |
+| Parts Wanted | `/wanted`, customer posts approved by staff |
+| Parts Exchange with offers and negotiation | `/exchange`, `/exchange/:id`, `/account` |
+| Contact and enquiry form with photo | `/contact` |
+| Customer accounts, optional | `/register`, `/signin`, `/account` |
+| Three roles, two admin levels | CUSTOMER, STAFF, ADMIN |
+| Admin manages services and portfolio | `/admin/services`, `/admin/projects` (administrator only) |
+| Admin manages listings, posts, reviews | `/admin/*` (staff and administrator) |
+| Privacy, terms and marketplace policies | `/privacy`, `/terms`, `/marketplace-terms` |
+| Consent before storing personal details | every form that saves data |
 
 ## Still to do
 
 - Automated tests
-- Image upload (photos are placeholders generated from the item name)
-- Sending enquiry emails (they are stored in the database only)
+- Real photographs (the client will supply them; placeholders until then)
+- A mail account, so enquiry emails actually send rather than being logged
+- Deployment to the client's domain
 - User documentation
-- Deployment
 
-## Assumptions
+## Requirements
 
-Made so the build could start before the client answered our Round 1
-questions. Each is small to change. See
-[docs/round-1-client-questions.md](docs/round-1-client-questions.md).
+The client has now answered both rounds of questions. What they said, what we
+changed because of it, and the five points still open are recorded in
+[docs/client-answers.md](docs/client-answers.md).
 
-- No online payments; the marketplace is listing and enquiry only (A1)
-- Only staff create listings; customers browse and enquire (A3)
-- Exchange is a noticeboard rather than an in-site offer system (B2)
-- No customer accounts; only staff sign in (C1)
-- Enquiries are stored in the database, not emailed (D2)
+Two things there are worth knowing before reading the code:
+
+1. Customers can post wanted ads and swap offers, and staff approve them. This
+   is our reading of an answer that also said "there is no user generated
+   content", which we believe referred to portfolio projects. It is question 1
+   in the open list.
+2. The policy pages are **drafts written by students**, not legal advice. They
+   need a real review before launch.

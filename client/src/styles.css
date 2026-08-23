@@ -499,3 +499,8 @@ tbody tr:hover { background: var(--gray-50); }
   .admin-main { padding: 20px; }
   h2 { font-size: 1.5rem; }
 }
+
+/* The sign in and admin buttons live in the burger menu on small screens. */
+@media (max-width: 900px) {
+  .nav-only { display: none; }
+}

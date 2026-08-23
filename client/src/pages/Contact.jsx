@@ -1,18 +1,23 @@
 import { useState } from 'react';
-import { post } from '../api.js';
+import { Link } from 'react-router-dom';
+import { postForm } from '../api.js';
+import { isSignedIn, currentName } from '../auth.js';
+import { business } from '../business.js';
 
 const TYPES = ['General', 'Service', 'Parts', 'Collaboration'];
 
 export default function Contact() {
   const [form, setForm] = useState({
     type: 'General',
-    name: '',
+    name: isSignedIn() ? currentName() : '',
     email: '',
     phone: '',
     vehicle: '',
     subject: '',
     message: '',
   });
+  const [photo, setPhoto] = useState(null);
+  const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,7 +27,7 @@ export default function Contact() {
     event.preventDefault();
     setError('');
     try {
-      await post('/enquiries', form);
+      await postForm('/enquiries', { ...form, consent }, photo);
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -45,8 +50,23 @@ export default function Contact() {
               <div className="empty">
                 <h2>Enquiry sent</h2>
                 <p className="muted" style={{ marginTop: 10 }}>
-                  Your message is stored and appears in the admin panel under Enquiries.
+                  It has been emailed to the workshop and added to their dashboard.
                 </p>
+
+                {!isSignedIn() && (
+                  <div className="card card-body" style={{ marginTop: 24, textAlign: 'left' }}>
+                    <strong>Want to track this?</strong>
+                    <p className="small muted" style={{ marginTop: 6 }}>
+                      Creating an account is optional, but it lets you make swap
+                      offers and post wanted ads without filling in your details
+                      each time.
+                    </p>
+                    <Link to="/register" className="btn btn-outline btn-small" style={{ marginTop: 12 }}>
+                      Create an account
+                    </Link>
+                  </div>
+                )}
+
                 <button className="btn btn-outline" style={{ marginTop: 20 }} onClick={() => setSent(false)}>
                   Send another
                 </button>
@@ -98,6 +118,28 @@ export default function Contact() {
                   <textarea id="message" className="input" required value={form.message} onChange={update('message')} />
                 </div>
 
+                <div>
+                  <label className="label" htmlFor="photo">Photo (optional)</label>
+                  <input
+                    id="photo"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="input"
+                    onChange={(event) => setPhoto(event.target.files[0] || null)}
+                  />
+                  <p className="form-note" style={{ marginTop: 6 }}>
+                    A photo of the part or the fault often saves a round of questions. Up to 5MB.
+                  </p>
+                </div>
+
+                <label className="row small" style={{ gap: 10, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+                  <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required />
+                  <span>
+                    I accept the <Link to="/privacy">privacy policy</Link> and agree to
+                    Outlier Autowerke storing these details so they can reply.
+                  </span>
+                </label>
+
                 {error && <p className="error">{error}</p>}
                 <button type="submit" className="btn btn-block">Send enquiry</button>
               </form>
@@ -107,22 +149,33 @@ export default function Contact() {
               <div className="card card-body">
                 <h3>Workshop details</h3>
                 <div style={{ marginTop: 12 }}>
-                  <div className="detail-row"><span className="muted">Email</span><span>hello@outlierautowerke.example</span></div>
-                  <div className="detail-row"><span className="muted">Phone</span><span>(07) 5555 0100</span></div>
-                  <div className="detail-row"><span className="muted">Location</span><span>Sunshine Coast, QLD</span></div>
+                  <div className="detail-row"><span className="muted">Trading name</span><span>{business.name}</span></div>
+                  <div className="detail-row"><span className="muted">ABN</span><span className="mono">{business.abn}</span></div>
+                  <div className="detail-row"><span className="muted">Location</span><span>{business.suburb}</span></div>
+                  <div className="detail-row"><span className="muted">Email</span><span>{business.email}</span></div>
                 </div>
-                <p className="form-note" style={{ marginTop: 12 }}>
-                  Placeholder details until the client confirms what to show publicly.
-                </p>
               </div>
 
               <div className="card card-body">
                 <h3>Opening hours</h3>
                 <div style={{ marginTop: 12 }}>
-                  <div className="detail-row"><span className="muted">Mon - Fri</span><span>8:00am - 5:30pm</span></div>
-                  <div className="detail-row"><span className="muted">Saturday</span><span>9:00am - 1:00pm</span></div>
-                  <div className="detail-row"><span className="muted">Sunday</span><span>Closed</span></div>
+                  {business.hours.map(([day, hours]) => (
+                    <div className="detail-row" key={day}>
+                      <span className="muted">{day}</span>
+                      <span>{hours}</span>
+                    </div>
+                  ))}
                 </div>
+              </div>
+
+              <div className="card card-body">
+                <h3>Booking a service?</h3>
+                <p className="small muted" style={{ marginTop: 8 }}>
+                  Use the booking form instead and pick a date directly.
+                </p>
+                <Link to="/book" className="btn btn-outline btn-block btn-small" style={{ marginTop: 12 }}>
+                  Book a service
+                </Link>
               </div>
             </aside>
           </div>

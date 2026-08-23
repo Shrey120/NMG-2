@@ -11,9 +11,10 @@ export default function Marketplace() {
   const [category, setCategory] = useState('');
   const [make, setMake] = useState('');
   const [sort, setSort] = useState('newest');
+  const [page, setPage] = useState(1);
 
   // The filters become the query string, so changing one reloads the data.
-  const query = new URLSearchParams({ search, category, make, sort }).toString();
+  const query = new URLSearchParams({ search, category, make, sort, page }).toString();
   const { data, loading } = useLoad(`/listings?${query}`);
 
   const listings = data?.listings || [];
@@ -24,6 +25,7 @@ export default function Marketplace() {
     setCategory('');
     setMake('');
     setSort('newest');
+    setPage(1);
   }
 
   return (
@@ -39,6 +41,7 @@ export default function Marketplace() {
             onSubmit={(event) => {
               event.preventDefault();
               setSearch(typed);
+              setPage(1);
             }}
           >
             <input
@@ -66,7 +69,7 @@ export default function Marketplace() {
               <div className="stack" style={{ marginTop: 16 }}>
                 <div>
                   <label className="label" htmlFor="f-category">Category</label>
-                  <select id="f-category" className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <select id="f-category" className="input" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}>
                     <option value="">All categories</option>
                     {(data?.categories || []).map((option) => (
                       <option key={option} value={option}>{option}</option>
@@ -76,7 +79,7 @@ export default function Marketplace() {
 
                 <div>
                   <label className="label" htmlFor="f-make">Marque</label>
-                  <select id="f-make" className="input" value={make} onChange={(e) => setMake(e.target.value)}>
+                  <select id="f-make" className="input" value={make} onChange={(e) => { setMake(e.target.value); setPage(1); }}>
                     <option value="">All marques</option>
                     {(data?.makes || []).map((option) => (
                       <option key={option} value={option}>{option}</option>
@@ -86,7 +89,7 @@ export default function Marketplace() {
 
                 <div>
                   <label className="label" htmlFor="f-sort">Sort by</label>
-                  <select id="f-sort" className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
+                  <select id="f-sort" className="input" value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}>
                     <option value="newest">Newest first</option>
                     <option value="cheapest">Price: low to high</option>
                     <option value="dearest">Price: high to low</option>
@@ -98,7 +101,7 @@ export default function Marketplace() {
             {/* Results */}
             <div>
               <p className="small muted" style={{ marginBottom: 16 }}>
-                {loading ? 'Searching...' : `${listings.length} part${listings.length === 1 ? '' : 's'} found`}
+                {loading ? 'Searching...' : `${data?.total || 0} part${data?.total === 1 ? '' : 's'} found`}
               </p>
 
               {loading ? (
@@ -131,6 +134,30 @@ export default function Marketplace() {
                       </div>
                     </Link>
                   ))}
+                </div>
+              )}
+
+              {/* One button per page. Fine for the few hundred listings the
+                  client expects; a long list would need a different control. */}
+              {!loading && data?.pageCount > 1 && (
+                <div className="row" style={{ marginTop: 32, justifyContent: 'center' }}>
+                  <button className="pill" disabled={page === 1} onClick={() => setPage(page - 1)}>
+                    Previous
+                  </button>
+
+                  {Array.from({ length: data.pageCount }, (unused, index) => index + 1).map((number) => (
+                    <button
+                      key={number}
+                      className={number === page ? 'pill pill-on' : 'pill'}
+                      onClick={() => setPage(number)}
+                    >
+                      {number}
+                    </button>
+                  ))}
+
+                  <button className="pill" disabled={page === data.pageCount} onClick={() => setPage(page + 1)}>
+                    Next
+                  </button>
                 </div>
               )}
             </div>

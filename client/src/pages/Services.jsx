@@ -37,8 +37,13 @@ export default function Services() {
                     <div style={{ flex: '0 0 200px' }}>
                       <p className="label">Indicative price</p>
                       <p className="mono" style={{ fontSize: '1.3rem', fontWeight: 700 }}>{service.price}</p>
-                      <Link to="/contact" className="btn btn-outline btn-block btn-small" style={{ marginTop: 14 }}>
-                        Enquire
+                      {service.bookable === 1 && (
+                        <Link to={`/book?service=${service.id}`} className="btn btn-block btn-small" style={{ marginTop: 14 }}>
+                          Book this service
+                        </Link>
+                      )}
+                      <Link to="/contact" className="btn btn-outline btn-block btn-small" style={{ marginTop: 10 }}>
+                        Ask a question
                       </Link>
                     </div>
                   </div>

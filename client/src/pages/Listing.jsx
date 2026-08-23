@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLoad } from '../useLoad.js';
-import { post, money } from '../api.js';
+import { postForm, money } from '../api.js';
 import Photo from '../components/Photo.jsx';
+import { isSignedIn, currentName } from '../auth.js';
 import Loading from '../components/Loading.jsx';
 
 function EnquiryForm({ listing }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', vehicle: '', message: '' });
+  const [form, setForm] = useState({
+    name: isSignedIn() ? currentName() : '',
+    email: '',
+    phone: '',
+    vehicle: '',
+    message: '',
+  });
+  const [photo, setPhoto] = useState(null);
+  const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
@@ -15,12 +24,17 @@ function EnquiryForm({ listing }) {
   async function submit(event) {
     event.preventDefault();
     try {
-      await post('/enquiries', {
-        ...form,
-        type: 'Parts',
-        subject: `Enquiry: ${listing.title}`,
-        listingId: listing.id,
-      });
+      await postForm(
+        '/enquiries',
+        {
+          ...form,
+          consent,
+          type: 'Parts',
+          subject: `Enquiry: ${listing.title}`,
+          listingId: listing.id,
+        },
+        photo
+      );
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -32,7 +46,7 @@ function EnquiryForm({ listing }) {
       <div className="card card-body center">
         <h3>Enquiry sent</h3>
         <p className="small muted" style={{ marginTop: 8 }}>
-          It now appears in the admin panel under Enquiries.
+          It has been emailed to the workshop and added to their dashboard.
         </p>
       </div>
     );
@@ -46,6 +60,25 @@ function EnquiryForm({ listing }) {
       <input className="input" placeholder="Phone (optional)" value={form.phone} onChange={update('phone')} aria-label="Phone" />
       <input className="input" placeholder="Your vehicle" value={form.vehicle} onChange={update('vehicle')} aria-label="Your vehicle" />
       <textarea className="input" placeholder="Ask about freight, condition or fitment" value={form.message} onChange={update('message')} aria-label="Message" />
+
+      <div>
+        <label className="label" htmlFor="listing-photo">Photo (optional)</label>
+        <input
+          id="listing-photo"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="input"
+          onChange={(event) => setPhoto(event.target.files[0] || null)}
+        />
+      </div>
+
+      <label className="row small" style={{ gap: 10, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required />
+        <span>
+          I accept the <Link to="/privacy">privacy policy</Link>.
+        </span>
+      </label>
+
       {error && <p className="error">{error}</p>}
       <button type="submit" className="btn btn-block">Send enquiry</button>
       <p className="form-note">No payment is taken on this site. Enquiries are stored for the workshop to answer.</p>

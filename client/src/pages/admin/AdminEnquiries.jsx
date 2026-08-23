@@ -74,6 +74,19 @@ export default function AdminEnquiries() {
                   <p>{enquiry.message}</p>
                   {enquiry.vehicle && <p className="small muted" style={{ marginTop: 10 }}>Vehicle: {enquiry.vehicle}</p>}
 
+                  {enquiry.photo && (
+                    <div style={{ marginTop: 14 }}>
+                      <p className="label">Photo attached</p>
+                      <a href={`/uploads/${enquiry.photo}`} target="_blank" rel="noreferrer">
+                        <img
+                          src={`/uploads/${enquiry.photo}`}
+                          alt="Sent with the enquiry"
+                          style={{ maxWidth: 260, border: 'var(--border)', borderRadius: 4 }}
+                        />
+                      </a>
+                    </div>
+                  )}
+
                   <div className="row" style={{ marginTop: 20 }}>
                     <a className="btn btn-outline btn-small" href={`mailto:${enquiry.email}?subject=Re: ${enquiry.subject}`}>
                       Reply by email

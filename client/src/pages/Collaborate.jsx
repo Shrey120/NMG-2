@@ -1,9 +1,15 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { post } from '../api.js';
 
 // The three partnership types are fixed marketing copy, so they live here
 // rather than in the database.
 const AREAS = [
+  {
+    title: 'Vehicle projects',
+    text: 'The collaborations the client is most interested in: rebuilds and restorations taken on together with other workshops, owners or clubs.',
+    tags: ['Rebuilds', 'Restorations', 'Long term builds', 'Club projects'],
+  },
   {
     title: 'Workshop and trade partners',
     text: 'We take on overflow fabrication, engine building and diagnostic work for other workshops, and we are always open to reciprocal arrangements.',
@@ -14,15 +20,11 @@ const AREAS = [
     text: 'Ongoing relationships with suppliers who can move quickly on hard to find European parts, especially discontinued lines.',
     tags: ['OEM suppliers', 'Dismantlers', 'Freight forwarders', 'Distributors'],
   },
-  {
-    title: 'Media and content creators',
-    text: 'Build documentation, photography and video collaboration on customer projects, with the owner permission.',
-    tags: ['Photographers', 'Videographers', 'Writers', 'Event organisers'],
-  },
 ];
 
 export default function Collaborate() {
   const [form, setForm] = useState({ name: '', business: '', email: '', phone: '', message: '' });
+  const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,6 +34,7 @@ export default function Collaborate() {
     event.preventDefault();
     try {
       await post('/enquiries', {
+        consent,
         type: 'Collaboration',
         name: form.name,
         email: form.email,
@@ -114,6 +117,13 @@ export default function Collaborate() {
                   <label className="label" htmlFor="c-message">What are you proposing?</label>
                   <textarea id="c-message" className="input" required value={form.message} onChange={update('message')} />
                 </div>
+
+                <label className="row small" style={{ gap: 10, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+                  <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required />
+                  <span>
+                    I accept the <Link to="/privacy">privacy policy</Link>.
+                  </span>
+                </label>
 
                 {error && <p className="error">{error}</p>}
                 <button type="submit" className="btn btn-block">Send enquiry</button>

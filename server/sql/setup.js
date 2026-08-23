@@ -1,5 +1,8 @@
-// Creates the database, builds the tables, loads the sample data and
-// creates the admin login. Run it with: npm run db:setup
+// Creates the database, builds the tables, creates the accounts and loads the
+// sample data. Run it with: npm run db:setup
+//
+// The accounts are created before the sample data, because sample wanted ads
+// and swap offers refer to user ids.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,22 +28,35 @@ await connection.query(`USE \`${dbName}\``);
 console.log('Creating tables...');
 await connection.query(fs.readFileSync(path.join(here, 'schema.sql'), 'utf8'));
 
+// Passwords are never stored as plain text. bcrypt turns the password into a
+// hash that cannot be reversed; at login we hash the attempt and compare.
+async function createUser(name, email, password, role) {
+  const passwordHash = await bcrypt.hash(password, 10);
+  await connection.query(
+    `INSERT INTO users (name, email, passwordHash, role, consentAt)
+     VALUES (?, ?, ?, ?, NOW())`,
+    [name, email, passwordHash, role]
+  );
+}
+
+console.log('Creating accounts...');
+const adminEmail = process.env.ADMIN_EMAIL || 'admin@outlierautowerke.com';
+const adminPassword = process.env.ADMIN_PASSWORD || 'admin1234';
+
+await createUser(process.env.ADMIN_NAME || 'Workshop Admin', adminEmail, adminPassword, 'ADMIN'); // id 1
+await createUser('Workshop Staff', 'staff@outlierautowerke.com', 'staff1234', 'STAFF');           // id 2
+await createUser('Daniel Reeve', 'daniel@example.com', 'customer1234', 'CUSTOMER');               // id 3
+await createUser('Marcus Lowe', 'marcus@example.com', 'customer1234', 'CUSTOMER');                // id 4
+
 console.log('Loading sample data...');
 await connection.query(fs.readFileSync(path.join(here, 'seed.sql'), 'utf8'));
 
-// Passwords are never stored as plain text. bcrypt turns the password into
-// a hash that cannot be reversed; at login we hash the attempt and compare.
-const email = process.env.ADMIN_EMAIL || 'admin@outlierautowerke.com';
-const password = process.env.ADMIN_PASSWORD || 'admin1234';
-const passwordHash = await bcrypt.hash(password, 10);
-
-await connection.query(
-  'INSERT INTO users (name, email, passwordHash, role) VALUES (?, ?, ?, ?)',
-  [process.env.ADMIN_NAME || 'Workshop Admin', email, passwordHash, 'ADMIN']
-);
-
 await connection.end();
 
-console.log('\nDone. Admin login:');
-console.log(`  email:    ${email}`);
-console.log(`  password: ${password}`);
+console.log(`
+Done. Sign in with any of these:
+
+  Administrator  ${adminEmail} / ${adminPassword}
+  Staff          staff@outlierautowerke.com / staff1234
+  Customer       daniel@example.com / customer1234
+`);

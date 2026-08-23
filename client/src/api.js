@@ -24,6 +24,24 @@ export const put = (path, body) => send(path, 'PUT', body);
 export const patch = (path, body) => send(path, 'PATCH', body);
 export const remove = (path) => send(path, 'DELETE');
 
+// Used for the enquiry form, because it can carry a photo. Form data cannot
+// be sent as JSON, and the browser sets its own Content-Type for it.
+export async function postForm(path, fields, file) {
+  const form = new FormData();
+  Object.entries(fields).forEach(([key, value]) => form.append(key, value ?? ''));
+  if (file) form.append('photo', file);
+
+  const response = await fetch(`/api${path}`, {
+    method: 'POST',
+    headers: authHeader(),
+    body: form,
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
 // Turns 1450 into "$1,450".
 export function money(amount) {
   return `$${Number(amount).toLocaleString('en-AU', { maximumFractionDigits: 0 })}`;

@@ -3,56 +3,57 @@ import { useLoad } from '../../useLoad.js';
 import { money } from '../../api.js';
 import Loading from '../../components/Loading.jsx';
 
+function Stat({ label, value, note, to }) {
+  const inside = (
+    <>
+      <span className="label">{label}</span>
+      <strong>{value}</strong>
+      <span className="small muted">{note}</span>
+    </>
+  );
+  return to ? <Link to={to} className="stat card-hover">{inside}</Link> : <div className="stat">{inside}</div>;
+}
+
 export default function AdminHome() {
   const stats = useLoad('/stats');
   const enquiries = useLoad('/enquiries');
 
   if (stats.loading) return <Loading />;
-
   const s = stats.data || {};
+
+  // Anything waiting on a person is gathered into one list.
+  const waiting = [
+    { count: s.unread, label: 'enquiries unread', to: '/admin/enquiries' },
+    { count: s.pendingBookings, label: 'bookings to confirm', to: '/admin/bookings' },
+    { count: s.pendingOffers, label: 'swap offers to answer', to: '/admin/offers' },
+    { count: s.pendingWanted, label: 'wanted ads to approve', to: '/admin/posts' },
+    { count: s.pendingReviews, label: 'testimonials to approve', to: '/admin/reviews' },
+  ].filter((item) => item.count > 0);
 
   return (
     <div>
       <h1>Dashboard</h1>
-      <p className="muted" style={{ marginTop: 6 }}>Overview of listings, enquiries and posts.</p>
+      <p className="muted" style={{ marginTop: 6 }}>Everything that needs attention, in one place.</p>
 
-      <div className="grid grid-4" style={{ marginTop: 28 }}>
-        <Link to="/admin/enquiries" className="stat card-hover">
-          <span className="label">Unread enquiries</span>
-          <strong>{s.unread}</strong>
-          <span className="small muted">{s.enquiries} in total</span>
-        </Link>
-
-        <Link to="/admin/listings" className="stat card-hover">
-          <span className="label">Parts available</span>
-          <strong>{s.available}</strong>
-          <span className="small muted">{s.listings} listings</span>
-        </Link>
-
-        <div className="stat">
-          <span className="label">Stock value</span>
-          <strong>{money(s.stockValue || 0)}</strong>
-          <span className="small muted">Available parts only</span>
-        </div>
-
-        <Link to="/admin/posts" className="stat card-hover">
-          <span className="label">Community posts</span>
-          <strong>{s.posts}</strong>
-          <span className="small muted">Wanted and exchange</span>
-        </Link>
-      </div>
-
-      {s.pendingReviews > 0 && (
-        <div className="card card-body between" style={{ marginTop: 24, alignItems: 'center' }}>
-          <div>
-            <strong>{s.pendingReviews} testimonial waiting for approval</strong>
-            <p className="small muted" style={{ marginTop: 4 }}>
-              Reviews submitted through the site stay hidden until approved.
-            </p>
+      {waiting.length > 0 && (
+        <div className="card card-body" style={{ marginTop: 24 }}>
+          <strong>Needs you</strong>
+          <div className="row" style={{ marginTop: 12 }}>
+            {waiting.map((item) => (
+              <Link key={item.label} to={item.to} className="pill">
+                {item.count} {item.label}
+              </Link>
+            ))}
           </div>
-          <Link to="/admin/reviews" className="btn btn-outline btn-small">Review now</Link>
         </div>
       )}
+
+      <div className="grid grid-4" style={{ marginTop: 24 }}>
+        <Stat label="Parts available" value={s.available} note={`${s.listings} listings`} to="/admin/listings" />
+        <Stat label="Stock value" value={money(s.stockValue || 0)} note="Available parts only" />
+        <Stat label="Bookings" value={s.bookings} note={`${s.pendingBookings} to confirm`} to="/admin/bookings" />
+        <Stat label="Swap offers" value={s.offers} note={`${s.pendingOffers} pending`} to="/admin/offers" />
+      </div>
 
       <h2 style={{ fontSize: '1.2rem', marginTop: 40, marginBottom: 16 }}>Recent enquiries</h2>
 
@@ -62,12 +63,7 @@ export default function AdminHome() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr>
-                <th>Name</th>
-                <th>Subject</th>
-                <th>Type</th>
-                <th>Status</th>
-              </tr>
+              <tr><th>Name</th><th>Subject</th><th>Type</th><th>Status</th></tr>
             </thead>
             <tbody>
               {(enquiries.data || []).slice(0, 5).map((enquiry) => (
