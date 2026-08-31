@@ -18,11 +18,16 @@ const storage = multer.diskStorage({
 
 export const uploadsPath = uploadsFolder;
 
-export const uploadPhoto = multer({
+const uploader = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, done) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp'];
     done(null, allowed.includes(file.mimetype));
   },
-}).single('photo');
+});
+
+// Enquiries send their optional photo as "photo"; the admin panel sends
+// project and service pictures as "image".
+export const uploadPhoto = uploader.single('photo');
+export const uploadImage = uploader.single('image');

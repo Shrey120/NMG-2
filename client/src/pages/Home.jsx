@@ -83,7 +83,7 @@ export default function Home() {
             <div className="grid grid-3">
               {featured.map((project) => (
                 <Link to={`/portfolio/${project.slug}`} key={project.id} className="card">
-                  <Photo name={project.title} />
+                  <Photo name={project.title} src={project.image} />
                   <div className="card-body">
                     <span className="badge badge-quiet">{project.category}</span>
                     <h3 style={{ marginTop: 12 }}>{project.title}</h3>

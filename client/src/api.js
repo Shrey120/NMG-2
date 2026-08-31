@@ -42,6 +42,17 @@ export async function postForm(path, fields, file) {
   return data;
 }
 
+// Uploads a single file, used for project and service pictures.
+export async function postFile(path, field, file) {
+  const form = new FormData();
+  form.append(field, file);
+
+  const response = await fetch(`/api${path}`, { method: 'POST', headers: authHeader(), body: form });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Upload failed');
+  return data;
+}
+
 // Turns 1450 into "$1,450".
 export function money(amount) {
   return `$${Number(amount).toLocaleString('en-AU', { maximumFractionDigits: 0 })}`;

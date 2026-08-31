@@ -2,7 +2,7 @@ import express from 'express';
 import { pool } from '../db.js';
 import { readUser, requireStaff, route } from '../auth.js';
 import { uploadPhoto } from '../upload.js';
-import { sendEnquiryEmail } from '../mail.js';
+import { emailOwnerEnquiry, emailCustomerEnquiryAck } from '../mail.js';
 
 export const router = express.Router();
 
@@ -39,10 +39,11 @@ router.post(
       ]
     );
 
-    // The client asked for enquiries by email as well as on the dashboard.
-    const { sent } = await sendEnquiryEmail(e);
+    // The owner is notified, and the sender gets an acknowledgement.
+    await emailOwnerEnquiry(e);
+    await emailCustomerEnquiryAck(e);
 
-    res.status(201).json({ ok: true, emailed: sent });
+    res.status(201).json({ ok: true });
   })
 );
 

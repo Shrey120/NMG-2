@@ -38,7 +38,7 @@ export default function Project() {
       </p>
 
       <div className="grid grid-3" style={{ marginTop: 32 }}>
-        <Photo name="Before" />
+        <Photo name={project.title} src={project.image} />
         <Photo name="During" />
         <Photo name="After" />
       </div>

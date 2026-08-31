@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLoad } from '../../useLoad.js';
-import { post, put, remove } from '../../api.js';
+import { post, put, remove, postFile } from '../../api.js';
 import Loading from '../../components/Loading.jsx';
 
 const BLANK = { title: '', summary: '', detail: '', price: '', bookable: 1, sortOrder: 0 };
@@ -19,6 +19,17 @@ export default function AdminServices() {
     else await post('/services', form);
     setSaving(false);
     setForm(null);
+    reload();
+  }
+
+  async function uploadImage(service, file) {
+    if (!file) return;
+    await postFile(`/services/${service.id}/image`, 'image', file);
+    reload();
+  }
+
+  async function clearImage(service) {
+    await remove(`/services/${service.id}/image`);
     reload();
   }
 
@@ -90,7 +101,7 @@ export default function AdminServices() {
         <div className="table-wrap" style={{ marginTop: 24 }}>
           <table>
             <thead>
-              <tr><th>Service</th><th>Price</th><th>Bookable</th><th>Order</th><th>Actions</th></tr>
+              <tr><th>Service</th><th>Image</th><th>Price</th><th>Bookable</th><th>Order</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {(data || []).map((service) => (
@@ -98,6 +109,24 @@ export default function AdminServices() {
                   <td>
                     <strong>{service.title}</strong>
                     <div className="small muted">{service.summary}</div>
+                  </td>
+                  <td>
+                    {service.image ? (
+                      <div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>
+                        <img src={`/uploads/${service.image}`} alt="" style={{ width: 56, height: 40, objectFit: 'cover', border: 'var(--border)', borderRadius: 3 }} />
+                        <button className="link-button small" onClick={() => clearImage(service)}>Remove</button>
+                      </div>
+                    ) : (
+                      <label className="link-button small" style={{ cursor: 'pointer' }}>
+                        Upload
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          style={{ display: 'none' }}
+                          onChange={(event) => uploadImage(service, event.target.files[0])}
+                        />
+                      </label>
+                    )}
                   </td>
                   <td className="mono">{service.price}</td>
                   <td>{service.bookable === 1 ? 'Yes' : 'No'}</td>

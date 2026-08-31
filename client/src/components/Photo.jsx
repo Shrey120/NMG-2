@@ -1,6 +1,18 @@
-// Stands in for a real photograph until the client sends theirs.
-// Shows the first letters of the name so cards look different from each other.
-export default function Photo({ name, className = '' }) {
+// Shows an uploaded picture when there is one. Until the client supplies
+// photographs it falls back to a marked placeholder, so nothing on the page
+// pretends to be a real photo of the car or part.
+export default function Photo({ name, src, className = '' }) {
+  if (src) {
+    return (
+      <img
+        src={`/uploads/${src}`}
+        alt={name}
+        className={`photo ${className}`}
+        style={{ objectFit: 'cover', display: 'block' }}
+      />
+    );
+  }
+
   const initials = name
     .split(' ')
     .slice(0, 2)

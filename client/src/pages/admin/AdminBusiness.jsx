@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useLoad } from '../../useLoad.js';
 import { put } from '../../api.js';
 import Loading from '../../components/Loading.jsx';
@@ -11,27 +12,12 @@ export default function AdminBusiness() {
 
   // Copy the loaded details into the form once they arrive.
   useEffect(() => {
-    if (data) setForm({ ...data, hours: data.hours.map((line) => ({ ...line })) });
+    if (data) setForm({ ...data });
   }, [data]);
 
   if (loading || !form) return <Loading />;
 
   const update = (field) => (event) => setForm({ ...form, [field]: event.target.value });
-
-  function updateHour(index, field, value) {
-    const hours = form.hours.map((line, position) =>
-      position === index ? { ...line, [field]: value } : line
-    );
-    setForm({ ...form, hours });
-  }
-
-  function addLine() {
-    setForm({ ...form, hours: [...form.hours, { label: '', hours: '' }] });
-  }
-
-  function removeLine(index) {
-    setForm({ ...form, hours: form.hours.filter((line, position) => position !== index) });
-  }
 
   async function save(event) {
     event.preventDefault();
@@ -81,37 +67,12 @@ export default function AdminBusiness() {
           <textarea id="b-blurb" className="input" required value={form.blurb} onChange={update('blurb')} />
         </div>
 
-        <div>
-          <span className="label">Opening hours</span>
-          <div className="stack" style={{ marginTop: 8 }}>
-            {form.hours.map((line, index) => (
-              <div className="row" key={index} style={{ flexWrap: 'nowrap' }}>
-                <input
-                  className="input"
-                  placeholder="Monday to Friday"
-                  aria-label="Days"
-                  value={line.label}
-                  onChange={(event) => updateHour(index, 'label', event.target.value)}
-                />
-                <input
-                  className="input"
-                  placeholder="8:00am - 5:30pm"
-                  aria-label="Hours"
-                  value={line.hours}
-                  onChange={(event) => updateHour(index, 'hours', event.target.value)}
-                />
-                <button type="button" className="link-button small" onClick={() => removeLine(index)}>
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <button type="button" className="btn btn-outline btn-small" style={{ marginTop: 12 }} onClick={addLine}>
-            Add a line
-          </button>
-          <p className="form-note" style={{ marginTop: 8 }}>
-            Add a line for anything extra, such as closures over Christmas.
+        <div className="card card-body" style={{ background: 'var(--gray-50)' }}>
+          <strong>Opening hours have moved</strong>
+          <p className="small muted" style={{ marginTop: 6 }}>
+            They are set under <Link to="/admin/availability">Availability</Link>,
+            because the same hours also decide which slots customers can book.
+            Changing them there updates both at once.
           </p>
         </div>
 

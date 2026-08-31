@@ -2,14 +2,16 @@ INSERT INTO businessDetails (id, name, abn, suburb, email, blurb) VALUES
 (1, 'Outlier Autowerke', '00 000 000 000', 'Sunshine Coast, QLD', 'hello@outlierautowerke.example',
  'European car specialists. Tuning, engine building, restoration and hard to find parts.');
 
-INSERT INTO openingHours (label, hours, sortOrder) VALUES
-('Monday to Friday', '8:00am - 5:30pm', 1),
-('Saturday', '9:00am - 1:00pm', 2),
-('Sunday', 'Closed', 3);
-
--- Sample data for the prototype.
--- Everything here is invented for demonstration and gets replaced
--- once the client supplies real services, photos, parts and reviews.
+-- Opening hours, which also decide which slots can be booked.
+-- weekday: 1 = Sunday, 2 = Monday ... 7 = Saturday.
+INSERT INTO availability (weekday, isOpen, openTime, closeTime, slotMinutes) VALUES
+(1, 0, '00:00:00', '00:00:00', 60),
+(2, 1, '08:00:00', '17:30:00', 60),
+(3, 1, '08:00:00', '17:30:00', 60),
+(4, 1, '08:00:00', '17:30:00', 60),
+(5, 1, '08:00:00', '17:30:00', 60),
+(6, 1, '08:00:00', '17:30:00', 60),
+(7, 1, '09:00:00', '13:00:00', 60);
 
 INSERT INTO services (title, summary, detail, price, bookable, sortOrder) VALUES
 ('Performance Tuning', 'Dyno-backed calibration for European engines, naturally aspirated or turbocharged.', 'Custom maps developed on the dyno rather than off-the-shelf flashes. Covers stage 1 through to fully built engines, including boost control, fuelling and safety limits tuned for Australian fuel and climate.', 'From $890', 1, 1),
@@ -102,7 +104,12 @@ INSERT INTO enquiries (type, name, email, phone, vehicle, subject, message, list
 ('General', 'Sophie Nguyen', 'sophie.n@example.com', '0400 000 444', '1991 Porsche 944', 'Pre-purchase inspection', 'I am looking at a 944 for sale nearby and would like a pre-purchase inspection before committing. Do you offer this and what does it cost?', NULL, 'read'),
 ('Parts', 'Hamish Doyle', 'hamish.d@example.com', '0400 000 555', '1988 BMW E30', 'Freight to Perth?', 'Interested in the headlight set. Can you pack and freight to Perth, and if so what would that cost on top?', 9, 'replied');
 
-INSERT INTO bookings (serviceId, userId, name, email, phone, vehicle, preferredDate, notes, status) VALUES
-(4, 3, 'Daniel Reeve', 'daniel.r@example.com', '0400 000 777', '1989 BMW E30 325i', '2026-09-02', 'Due for a logbook service. There is also a slight misfire under load I would like looked at.', 'requested'),
-(1, NULL, 'Nadia Kaur', 'nadia.k@example.com', '0400 000 888', '2018 VW Golf R', '2026-09-05', 'After a stage 1 tune. Car is otherwise standard.', 'requested'),
-(2, 4, 'Marcus Lowe', 'marcus.l@example.com', '0400 000 999', '2003 BMW E46 M3', '2026-09-12', 'Preventative rod bearing job, discussed by email already.', 'confirmed');
+INSERT INTO bookings (serviceId, userId, name, email, phone, vehicle, bookingDate, slotTime, notes, status, consentAt) VALUES
+(4, 3, 'Daniel Reeve', 'daniel@example.com', '0400 000 777', '1989 BMW E30 325i', DATE_ADD(CURDATE(), INTERVAL 8 DAY), '09:00:00', 'Due for a logbook service. There is also a slight misfire under load I would like looked at.', 'Pending', NOW()),
+(1, NULL, 'Nadia Kaur', 'nadia.k@example.com', '0400 000 888', '2018 VW Golf R', DATE_ADD(CURDATE(), INTERVAL 9 DAY), '13:00:00', 'After a stage 1 tune. Car is otherwise standard.', 'Pending', NOW()),
+(2, 4, 'Marcus Lowe', 'marcus@example.com', '0400 000 999', '2003 BMW E46 M3', DATE_ADD(CURDATE(), INTERVAL 3 DAY), '10:00:00', 'Preventative rod bearing job, discussed by email already.', 'Accepted', NOW());
+
+-- A public holiday the owner has blocked out, plus one blocked slot.
+INSERT INTO blockedSlots (blockDate, slotTime, reason) VALUES
+(DATE_ADD(CURDATE(), INTERVAL 5 DAY), NULL, 'Public holiday'),
+(DATE_ADD(CURDATE(), INTERVAL 3 DAY), '11:00:00', 'Dyno maintenance');

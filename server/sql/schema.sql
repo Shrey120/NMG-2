@@ -5,7 +5,9 @@
 --
 -- Tables are dropped child first so the foreign keys do not block the drop.
 
-DROP TABLE IF EXISTS openingHours;
+DROP TABLE IF EXISTS emailLog;
+DROP TABLE IF EXISTS blockedSlots;
+DROP TABLE IF EXISTS availability;
 DROP TABLE IF EXISTS businessDetails;
 DROP TABLE IF EXISTS offerMessages;
 DROP TABLE IF EXISTS exchangeOffers;
@@ -59,13 +61,41 @@ CREATE TABLE businessDetails (
   blurb  VARCHAR(400) NOT NULL
 );
 
--- One row per line of the opening hours table. A separate table because the
--- client may want to add or remove lines, such as a public holiday note.
-CREATE TABLE openingHours (
+-- The workshop opening hours, one row per weekday. This is the single source
+-- of truth: the hours shown on the website are built from these rows, and so
+-- are the bookable slots. Changing Saturday here changes both at once.
+--
+-- weekday follows MySQL DAYOFWEEK: 1 = Sunday through to 7 = Saturday.
+CREATE TABLE availability (
+  weekday     INT PRIMARY KEY,
+  isOpen      TINYINT(1) NOT NULL DEFAULT 1,
+  openTime    TIME NOT NULL DEFAULT '08:00:00',
+  closeTime   TIME NOT NULL DEFAULT '17:00:00',
+  -- How long one booking slot lasts, in minutes.
+  slotMinutes INT  NOT NULL DEFAULT 60
+);
+
+-- Dates and slots the owner has taken out of circulation. A NULL slotTime
+-- blocks the whole day, for example a public holiday.
+CREATE TABLE blockedSlots (
   id        INT AUTO_INCREMENT PRIMARY KEY,
-  label     VARCHAR(80) NOT NULL,
-  hours     VARCHAR(80) NOT NULL,
-  sortOrder INT NOT NULL DEFAULT 0
+  blockDate DATE NOT NULL,
+  slotTime  TIME NULL,
+  reason    VARCHAR(200) NOT NULL DEFAULT '',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idxBlockDate (blockDate)
+);
+
+-- Every email the system tried to send. Until the client supplies a mail
+-- account nothing actually leaves the building, so this table is the evidence
+-- that the right message was produced at the right moment.
+CREATE TABLE emailLog (
+  id        INT AUTO_INCREMENT PRIMARY KEY,
+  toAddress VARCHAR(200) NOT NULL,
+  subject   VARCHAR(300) NOT NULL,
+  body      TEXT NOT NULL,
+  delivered TINYINT(1) NOT NULL DEFAULT 0,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE services (
@@ -74,6 +104,8 @@ CREATE TABLE services (
   summary   VARCHAR(300) NOT NULL,
   detail    TEXT         NOT NULL,
   price     VARCHAR(60)  NOT NULL,
+  -- Filename of an uploaded image, served from /uploads.
+  image     VARCHAR(200) NULL,
   -- Whether customers can book this one online.
   bookable  TINYINT(1)   NOT NULL DEFAULT 1,
   sortOrder INT          NOT NULL DEFAULT 0
@@ -90,6 +122,7 @@ CREATE TABLE projects (
   summary  VARCHAR(400) NOT NULL,
   story    TEXT         NOT NULL,
   result   VARCHAR(400) NOT NULL,
+  image    VARCHAR(200) NULL,
   featured TINYINT(1)   NOT NULL DEFAULT 0
 );
 
@@ -220,19 +253,31 @@ CREATE TABLE enquiries (
 );
 
 -- Anyone can book a service, signed in or not.
+--
+-- status follows the wording in the requirements document:
+--   Pending   - submitted, waiting on the owner
+--   Accepted  - approved, and the slot is now reserved
+--   Declined  - refused by the owner, the slot goes back into circulation
+--   Cancelled - called off after being accepted
 CREATE TABLE bookings (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
-  serviceId     INT          NOT NULL,
-  userId        INT          NULL,
-  name          VARCHAR(100) NOT NULL,
-  email         VARCHAR(150) NOT NULL,
-  phone         VARCHAR(40)  NOT NULL DEFAULT '',
-  vehicle       VARCHAR(120) NOT NULL,
-  preferredDate DATE         NOT NULL,
-  notes         TEXT         NOT NULL,
-  status        VARCHAR(20)  NOT NULL DEFAULT 'requested',
-  consentAt     DATETIME     NULL,
-  createdAt     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  serviceId   INT          NOT NULL,
+  userId      INT          NULL,
+  name        VARCHAR(100) NOT NULL,
+  email       VARCHAR(150) NOT NULL,
+  phone       VARCHAR(40)  NOT NULL DEFAULT '',
+  vehicle     VARCHAR(120) NOT NULL,
+  bookingDate DATE         NOT NULL,
+  slotTime    TIME         NOT NULL,
+  notes       TEXT         NOT NULL,
+  status      VARCHAR(20)  NOT NULL DEFAULT 'Pending',
+  -- Random single use string that lets the owner accept or decline straight
+  -- from the email, without signing in. Cleared once it has been used.
+  actionToken VARCHAR(64)  NULL UNIQUE,
+  consentAt   DATETIME     NULL,
+  decidedAt   DATETIME     NULL,
+  createdAt   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (serviceId) REFERENCES services(id) ON DELETE CASCADE,
-  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idxSlot (bookingDate, slotTime, status)
 );

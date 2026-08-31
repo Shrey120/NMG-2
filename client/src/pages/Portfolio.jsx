@@ -43,7 +43,7 @@ export default function Portfolio() {
             <div className="grid grid-3">
               {shown.map((project) => (
                 <Link to={`/portfolio/${project.slug}`} key={project.id} className="card">
-                  <Photo name={project.title} />
+                  <Photo name={project.title} src={project.image} />
                   <div className="card-body">
                     <div className="row" style={{ gap: 8 }}>
                       <span className="badge badge-quiet">{project.category}</span>

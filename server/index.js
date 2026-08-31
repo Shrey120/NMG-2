@@ -5,6 +5,7 @@ import { uploadsPath } from './upload.js';
 
 import { router as auth } from './routes/auth.js';
 import { router as business } from './routes/business.js';
+import { router as availability } from './routes/availability.js';
 import { router as services } from './routes/services.js';
 import { router as projects } from './routes/projects.js';
 import { router as listings } from './routes/listings.js';
@@ -27,6 +28,7 @@ app.use('/uploads', express.static(uploadsPath));
 // Each file below handles one part of the site.
 app.use('/api', auth); // /api/register, /api/login, /api/me
 app.use('/api/business', business);
+app.use('/api/availability', availability);
 app.use('/api/services', services);
 app.use('/api/projects', projects);
 app.use('/api/listings', listings);

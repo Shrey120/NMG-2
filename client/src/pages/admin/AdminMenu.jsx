@@ -8,6 +8,7 @@ const STAFF_LINKS = [
   { to: '/admin/listings', label: 'Parts listings' },
   { to: '/admin/enquiries', label: 'Enquiries' },
   { to: '/admin/bookings', label: 'Bookings' },
+  { to: '/admin/availability', label: 'Availability' },
   { to: '/admin/offers', label: 'Swap offers' },
   { to: '/admin/posts', label: 'Wanted & Exchange' },
   { to: '/admin/reviews', label: 'Testimonials' },

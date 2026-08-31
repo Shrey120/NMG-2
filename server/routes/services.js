@@ -1,6 +1,7 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { requireAdmin, route } from '../auth.js';
+import { uploadImage } from '../upload.js';
 
 export const router = express.Router();
 
@@ -44,6 +45,28 @@ router.delete(
   requireAdmin,
   route(async (req, res) => {
     await pool.query('DELETE FROM services WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  })
+);
+
+// Picture for one service. The client will supply real photographs later,
+// so this is how they get in without a developer.
+router.post(
+  '/:id/image',
+  requireAdmin,
+  uploadImage,
+  route(async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Choose a JPEG, PNG or WebP image' });
+    await pool.query('UPDATE services SET image = ? WHERE id = ?', [req.file.filename, req.params.id]);
+    res.json({ image: req.file.filename });
+  })
+);
+
+router.delete(
+  '/:id/image',
+  requireAdmin,
+  route(async (req, res) => {
+    await pool.query('UPDATE services SET image = NULL WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
   })
 );

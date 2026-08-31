@@ -34,6 +34,7 @@ import AdminReviews from './pages/admin/AdminReviews.jsx';
 import AdminServices from './pages/admin/AdminServices.jsx';
 import AdminProjects from './pages/admin/AdminProjects.jsx';
 import AdminBusiness from './pages/admin/AdminBusiness.jsx';
+import AdminAvailability from './pages/admin/AdminAvailability.jsx';
 
 // The public pages all share the same header and footer.
 function Site({ children }) {
@@ -111,6 +112,7 @@ export default function App() {
         <Route path="/admin/listings" element={<Staff><AdminListings /></Staff>} />
         <Route path="/admin/enquiries" element={<Staff><AdminEnquiries /></Staff>} />
         <Route path="/admin/bookings" element={<Staff><AdminBookings /></Staff>} />
+        <Route path="/admin/availability" element={<Staff><AdminAvailability /></Staff>} />
         <Route path="/admin/offers" element={<Staff><AdminOffers /></Staff>} />
         <Route path="/admin/posts" element={<Staff><AdminPosts /></Staff>} />
         <Route path="/admin/reviews" element={<Staff><AdminReviews /></Staff>} />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLoad } from '../../useLoad.js';
-import { get, post, put, remove } from '../../api.js';
+import { get, post, put, remove, postFile } from '../../api.js';
 import Loading from '../../components/Loading.jsx';
 
 const BLANK = {
@@ -29,6 +29,17 @@ export default function AdminProjects() {
     else await post('/projects', form);
     setSaving(false);
     setForm(null);
+    reload();
+  }
+
+  async function uploadImage(project, file) {
+    if (!file) return;
+    await postFile(`/projects/${project.id}/image`, 'image', file);
+    reload();
+  }
+
+  async function clearImage(project) {
+    await remove(`/projects/${project.id}/image`);
     reload();
   }
 
@@ -124,12 +135,30 @@ export default function AdminProjects() {
         <div className="table-wrap" style={{ marginTop: 24 }}>
           <table>
             <thead>
-              <tr><th>Project</th><th>Marque</th><th>Category</th><th>Year</th><th>Home page</th><th>Actions</th></tr>
+              <tr><th>Project</th><th>Image</th><th>Marque</th><th>Category</th><th>Year</th><th>Home page</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {(data || []).map((project) => (
                 <tr key={project.id}>
                   <td><strong>{project.title}</strong></td>
+                  <td>
+                    {project.image ? (
+                      <div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>
+                        <img src={`/uploads/${project.image}`} alt="" style={{ width: 56, height: 40, objectFit: 'cover', border: 'var(--border)', borderRadius: 3 }} />
+                        <button className="link-button small" onClick={() => clearImage(project)}>Remove</button>
+                      </div>
+                    ) : (
+                      <label className="link-button small" style={{ cursor: 'pointer' }}>
+                        Upload
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          style={{ display: 'none' }}
+                          onChange={(event) => uploadImage(project, event.target.files[0])}
+                        />
+                      </label>
+                    )}
+                  </td>
                   <td className="muted">{project.make}</td>
                   <td className="muted">{project.category}</td>
                   <td>{project.year}</td>

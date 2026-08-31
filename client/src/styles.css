@@ -504,3 +504,17 @@ tbody tr:hover { background: var(--gray-50); }
 @media (max-width: 900px) {
   .nav-only { display: none; }
 }
+
+/* Browsers colour checkboxes, radios and date pickers blue by default.
+   The design is black and white only, so they are overridden here. */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--black);
+  width: 16px;
+  height: 16px;
+}
+
+input[type='date'],
+input[type='time'] {
+  color-scheme: light;
+}
