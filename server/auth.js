@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import './env.js';
+import { pool } from './db.js';
 
 const SECRET = process.env.JWT_SECRET || 'change-this-to-a-long-random-string';
 
@@ -12,12 +13,13 @@ export function makeToken(user) {
   return jwt.sign({ id: user.id, name: user.name, role: user.role }, SECRET, { expiresIn: '8h' });
 }
 
+const tokenFrom = (req) => (req.headers.authorization || '').replace('Bearer ', '');
+
 // Reads the token if one was sent, but does not insist on it. Used on routes
 // that work for both guests and signed in people.
 export function readUser(req, res, next) {
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
   try {
-    req.user = jwt.verify(token, SECRET);
+    req.user = jwt.verify(tokenFrom(req), SECRET);
   } catch {
     req.user = null;
   }
@@ -25,18 +27,34 @@ export function readUser(req, res, next) {
 }
 
 // Builds a middleware that only lets the listed roles through.
+//
+// The role is read fresh from the database rather than trusted from the
+// token. That way when an administrator removes someone's staff access it
+// takes effect on their very next click, instead of lasting until their
+// 8 hour token runs out.
 function allow(...roles) {
-  return (req, res, next) => {
-    const token = (req.headers.authorization || '').replace('Bearer ', '');
+  return async (req, res, next) => {
+    let fromToken;
     try {
-      req.user = jwt.verify(token, SECRET);
+      fromToken = jwt.verify(tokenFrom(req), SECRET);
     } catch {
       return res.status(401).json({ error: 'Please sign in' });
     }
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'You do not have access to that' });
+
+    try {
+      const [[user]] = await pool.query('SELECT id, name, role FROM users WHERE id = ?', [fromToken.id]);
+
+      if (!user) return res.status(401).json({ error: 'Please sign in' });
+      if (!roles.includes(user.role)) {
+        return res.status(403).json({ error: 'You do not have access to that' });
+      }
+
+      req.user = user;
+      next();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Something went wrong' });
     }
-    next();
   };
 }
 

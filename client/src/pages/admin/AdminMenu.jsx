@@ -18,6 +18,7 @@ const ADMIN_LINKS = [
   { to: '/admin/services', label: 'Services' },
   { to: '/admin/projects', label: 'Portfolio' },
   { to: '/admin/business', label: 'Business details' },
+  { to: '/admin/staff', label: 'Staff accounts' },
 ];
 
 export default function AdminMenu() {
@@ -34,7 +35,7 @@ export default function AdminMenu() {
     <nav className="sidebar">
       <Link to="/" className="logo" style={{ padding: '4px 12px 16px' }}>
         <span className="logo-mark">OA</span>
-        <span className="logo-text">OUTLIER<small>ADMIN</small></span>
+        <span className="logo-text">OUTLIER<small>{isAdmin() ? 'ADMINISTRATOR' : 'STAFF'}</small></span>
       </Link>
 
       {links.map((link) => (

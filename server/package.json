@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch index.js",
     "start": "node index.js",
-    "db:setup": "node sql/setup.js"
+    "db:setup": "node sql/setup.js",
+    "mail:test": "node mail-test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

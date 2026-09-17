@@ -30,6 +30,8 @@ DROP TABLE IF EXISTS users;
 --   CUSTOMER - can browse, enquire, book a service, post a wanted ad, make a swap offer
 --   STAFF    - all of the above plus manage listings, posts, enquiries and bookings
 --   ADMIN    - all of the above plus manage services, projects and staff accounts
+--
+-- Sign-up offers CUSTOMER or STAFF. Nobody can sign up as ADMIN.
 CREATE TABLE users (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   name         VARCHAR(100) NOT NULL,
@@ -95,6 +97,8 @@ CREATE TABLE emailLog (
   subject   VARCHAR(300) NOT NULL,
   body      TEXT NOT NULL,
   delivered TINYINT(1) NOT NULL DEFAULT 0,
+  -- Why it did not send, when a mail account is set but something failed.
+  error     VARCHAR(500) NULL,
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

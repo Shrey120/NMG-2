@@ -12,6 +12,8 @@ import {
 
 export const router = express.Router();
 
+// Where links in emails point. Set PUBLIC_URL once the site is live,
+// otherwise the links only work on the computer running it.
 const baseUrl = (req) => process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
 
 async function loadBooking(id) {
@@ -62,7 +64,7 @@ async function decide(booking, decision) {
 // token in the link is the proof, and it only works once.
 // ---------------------------------------------------------------------------
 
-const page = (heading, message) => `<!doctype html>
+const page = (heading, message, siteUrl = '') => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${heading}</title>
@@ -76,7 +78,7 @@ const page = (heading, message) => `<!doctype html>
       padding: 12px 22px; border-radius: 4px; font-weight: 600; font-size: 0.9rem; }
 </style></head>
 <body><div class="box"><h1>${heading}</h1><p>${message}</p>
-<a href="/admin/bookings">Open the admin panel</a></div></body></html>`;
+<a href="${siteUrl}/admin/bookings">Open the admin panel</a></div></body></html>`;
 
 router.get(
   '/action',
@@ -97,7 +99,7 @@ router.get(
 
     const booking = await loadBooking(found.id);
     const result = await decide(booking, decision);
-    res.send(page(result.ok ? 'Done' : 'Nothing changed', result.message));
+    res.send(page(result.ok ? 'Done' : 'Nothing changed', result.message, process.env.PUBLIC_URL || ''));
   })
 );
 

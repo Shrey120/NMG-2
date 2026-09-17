@@ -7,12 +7,20 @@ import { pool } from './db.js';
 // MAIL_HOST is blank and nothing actually leaves the building - but the log
 // still shows the right message was produced at the right moment.
 const canSend = Boolean(process.env.MAIL_HOST);
+const port = Number(process.env.MAIL_PORT) || 587;
 
-const transport = canSend
+export const transport = canSend
   ? nodemailer.createTransport({
       host: process.env.MAIL_HOST,
-      port: Number(process.env.MAIL_PORT) || 587,
-      auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASSWORD },
+      port,
+      // Port 465 expects an encrypted connection from the start. Port 587
+      // starts plain and upgrades, which nodemailer does on its own.
+      secure: port === 465,
+      // A local test inbox such as Mailpit needs no login, so only send one
+      // when a username has been set.
+      auth: process.env.MAIL_USER
+        ? { user: process.env.MAIL_USER, pass: process.env.MAIL_PASSWORD }
+        : undefined,
     })
   : null;
 
@@ -20,23 +28,32 @@ export const ownerAddress = () => process.env.MAIL_TO || 'owner@outlierautowerke
 
 async function send(to, subject, body, replyTo) {
   let delivered = false;
+  let error = null;
 
   if (canSend && to) {
-    await transport.sendMail({
-      from: process.env.MAIL_FROM || ownerAddress(),
-      to,
-      replyTo,
-      subject,
-      text: body,
-    });
-    delivered = true;
+    // A failed email must never break the thing that triggered it. The
+    // booking or enquiry is already saved by this point, so the failure is
+    // recorded in emailLog and the customer still gets a normal response.
+    try {
+      await transport.sendMail({
+        from: process.env.MAIL_FROM || process.env.MAIL_USER || ownerAddress(),
+        to,
+        replyTo,
+        subject,
+        text: body,
+      });
+      delivered = true;
+    } catch (err) {
+      error = err.message;
+      console.error(`[email failed] ${subject} -> ${to}: ${err.message}`);
+    }
   } else {
     console.log(`\n--- email (not sent, no mail account) ---\nTo: ${to}\nSubject: ${subject}\n\n${body}\n---\n`);
   }
 
   await pool.query(
-    'INSERT INTO emailLog (toAddress, subject, body, delivered) VALUES (?, ?, ?, ?)',
-    [to, subject, body, delivered ? 1 : 0]
+    'INSERT INTO emailLog (toAddress, subject, body, delivered, error) VALUES (?, ?, ?, ?, ?)',
+    [to, subject, body, delivered ? 1 : 0, error]
   );
 
   return delivered;
@@ -49,6 +66,8 @@ const when = (booking) => `${booking.bookingDate} at ${String(booking.slotTime).
 // Goes to the owner. Carries the two links that let them decide without
 // signing in.
 export function emailOwnerNewBooking(booking, serviceTitle, baseUrl) {
+  // baseUrl is PUBLIC_URL when set, which is what makes these links work
+  // from a phone rather than only on the computer running the site.
   const accept = `${baseUrl}/api/bookings/action?token=${booking.actionToken}&do=accept`;
   const decline = `${baseUrl}/api/bookings/action?token=${booking.actionToken}&do=decline`;
 
@@ -175,6 +194,26 @@ export function emailCustomerEnquiryAck(enquiry) {
       `Your message: ${enquiry.subject}`,
       '',
       'Outlier Autowerke',
+    ].join('\n')
+  );
+}
+
+// --- Staff accounts -------------------------------------------------------
+
+// A heads-up, not an approval. Staff accounts work as soon as they are made.
+export function emailOwnerNewStaff(user) {
+  return send(
+    ownerAddress(),
+    `New staff account: ${user.name}`,
+    [
+      'A new staff account has just been created on the website.',
+      '',
+      `Name:  ${user.name}`,
+      `Email: ${user.email}`,
+      '',
+      'Staff can see bookings, enquiries and customer details.',
+      'If you do not recognise this person, remove their access under',
+      'Staff accounts in the admin panel.',
     ].join('\n')
   );
 }

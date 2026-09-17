@@ -3,8 +3,22 @@ import { useNavigate, Link } from 'react-router-dom';
 import { post } from '../api.js';
 import { saveSignIn } from '../auth.js';
 
+const TYPES = [
+  {
+    value: 'customer',
+    title: 'Customer',
+    text: 'Make swap offers, post wanted ads and keep track of them. Your account works straight away.',
+  },
+  {
+    value: 'staff',
+    title: 'Staff member',
+    text: 'For people who work at Outlier Autowerke. Takes you straight to the admin panel.',
+  },
+];
+
 export default function Register() {
   const navigate = useNavigate();
+  const [accountType, setAccountType] = useState('customer');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', suburb: '' });
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
@@ -15,24 +29,58 @@ export default function Register() {
     event.preventDefault();
     setError('');
     try {
-      const result = await post('/register', { ...form, consent });
+      const result = await post('/register', { ...form, consent, accountType });
       saveSignIn(result);
-      navigate('/account');
+
+      // Both account types are signed in straight away. Staff go to the
+      // admin panel, customers to their own account page.
+      navigate(result.role === 'STAFF' ? '/admin/home' : '/account');
     } catch (err) {
       setError(err.message);
     }
   }
 
   return (
-    <div className="page section" style={{ maxWidth: 520 }}>
+    <div className="page section" style={{ maxWidth: 560 }}>
       <h1>Create an account</h1>
       <p className="muted" style={{ marginTop: 8 }}>
-        An account is optional. You can browse and send enquiries without one.
-        It is needed to make a swap offer or post a wanted ad, so we have a way
-        to reply to you.
+        Customers do not need an account to browse, book a service or send an
+        enquiry.
       </p>
 
       <form onSubmit={submit} className="card card-body stack" style={{ marginTop: 24 }}>
+        <div>
+          <span className="label">I am signing up as</span>
+          <div className="stack" style={{ marginTop: 8 }}>
+            {TYPES.map((type) => (
+              <label
+                key={type.value}
+                className="swap-box row"
+                style={{
+                  cursor: 'pointer',
+                  gap: 12,
+                  flexWrap: 'nowrap',
+                  alignItems: 'flex-start',
+                  borderColor: accountType === type.value ? 'var(--black)' : undefined,
+                }}
+              >
+                <input
+                  type="radio"
+                  name="accountType"
+                  value={type.value}
+                  checked={accountType === type.value}
+                  onChange={() => setAccountType(type.value)}
+                  style={{ marginTop: 3 }}
+                />
+                <span>
+                  <strong>{type.title}</strong>
+                  <span className="small muted" style={{ display: 'block', marginTop: 2 }}>{type.text}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div>
           <label className="label" htmlFor="name">Name</label>
           <input id="name" className="input" required value={form.name} onChange={update('name')} />
@@ -69,7 +117,9 @@ export default function Register() {
         </label>
 
         {error && <p className="error">{error}</p>}
-        <button type="submit" className="btn btn-block">Create account</button>
+        <button type="submit" className="btn btn-block">
+          {accountType === 'staff' ? 'Create staff account' : 'Create account'}
+        </button>
 
         <p className="small center">
           Already have an account? <Link to="/signin">Sign in</Link>

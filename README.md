@@ -69,13 +69,26 @@ npm run dev
 Vite forwards anything starting with `/api` to the Express server, so the
 browser only ever talks to one address.
 
-Enquiries are emailed as well as shown on the dashboard. Until the client gives
-us a mail account, `MAIL_HOST` is left blank in `server/.env` and the email is
-printed to the terminal instead of sent.
+**Email.** Bookings and enquiries send email to the owner and the customer. For
+development, run a local test inbox and open http://localhost:8025 to read what
+was sent:
+
+```bash
+docker run -d --name oa-mail -p 1025:1025 -p 8025:8025 axllent/mailpit
+npm run mail:test
+```
+
+Full instructions for the test inbox, Gmail, and the client's own mailbox are in
+[docs/email-setup.md](docs/email-setup.md).
 
 ### Admin panel
 
 `npm run db:setup` creates one account per role. Sign in at `/signin`.
+
+New people can sign up at `/register` as either a **customer** or a **staff
+member**; both work straight away. Nobody can sign up as an administrator.
+The owner is emailed whenever a staff account is created, and an administrator
+can remove anyone's staff access under Staff accounts.
 
 | Role | Sign in | Can do |
 |---|---|---|
@@ -113,7 +126,9 @@ client/src/
 |---|---|
 | `users` | accounts, with a role of CUSTOMER, STAFF or ADMIN |
 | `businessDetails` | trading name, ABN, suburb, email and footer text (one row) |
-| `openingHours` | one row per line of the opening hours table |
+| `availability` | opening hours per weekday, which also decide the bookable slots |
+| `blockedSlots` | dates and single slots the owner has blocked |
+| `emailLog` | every email the site tried to send, with any error |
 | `services` | the workshop service list, and whether each can be booked online |
 | `projects` | portfolio builds |
 | `projectWork` | bullet points belonging to a project (one to many) |
@@ -166,7 +181,7 @@ as JSON without renaming anything in between.
 
 - Automated tests
 - Real photographs (the client will supply them; placeholders until then)
-- A mail account, so enquiry emails actually send rather than being logged
+- The client's own mailbox (Gmail works now; see docs/email-setup.md)
 - Deployment to the client's domain
 - User documentation
 
