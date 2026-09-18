@@ -5,10 +5,14 @@ import { transport } from './mail.js';
 
 const to = process.env.MAIL_TO;
 
+// Blank is a valid choice, not a mistake: emails are produced and listed in
+// the admin panel without being sent. See Option A in docs/email-setup.md.
 if (!process.env.MAIL_HOST) {
-  console.log('MAIL_HOST is blank in server/.env, so email is switched off.');
-  console.log('Fill in the MAIL_ lines first. See docs/email-setup.md.');
-  process.exit(1);
+  console.log('Email sending is off, because MAIL_HOST is blank in server/.env.');
+  console.log('That is fine: every email is listed under Admin panel -> Sent emails,');
+  console.log('and the Accept and Decline links work from there.');
+  console.log('To send real email through Gmail, see docs/email-setup.md, Option B.');
+  process.exit(0);
 }
 if (!to) {
   console.log('MAIL_TO is blank. Set it to the address that should receive the test.');
