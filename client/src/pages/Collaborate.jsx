@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { post } from '../api.js';
+import LoadingButton from '../components/LoadingButton.jsx';
 
 // The three partnership types are fixed marketing copy, so they live here
 // rather than in the database.
@@ -26,12 +27,16 @@ export default function Collaborate() {
   const [form, setForm] = useState({ name: '', business: '', email: '', phone: '', message: '' });
   const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
   const update = (field) => (event) => setForm({ ...form, [field]: event.target.value });
 
   async function submit(event) {
     event.preventDefault();
+    if (sending) return;
+    setError('');
+    setSending(true);
     try {
       await post('/enquiries', {
         consent,
@@ -46,6 +51,7 @@ export default function Collaborate() {
       setSent(true);
     } catch (err) {
       setError(err.message);
+      setSending(false);
     }
   }
 
@@ -89,7 +95,7 @@ export default function Collaborate() {
               <div className="card card-body center">
                 <h3>Message received</h3>
                 <p className="small muted" style={{ marginTop: 8 }}>
-                  Your enquiry is now in the admin panel under Enquiries.
+                  Thank you for your enquiry. We will get back to you soon.
                 </p>
               </div>
             ) : (
@@ -126,7 +132,7 @@ export default function Collaborate() {
                 </label>
 
                 {error && <p className="error">{error}</p>}
-                <button type="submit" className="btn btn-block">Send enquiry</button>
+                <LoadingButton type="submit" className="btn btn-block" loading={sending}>Send enquiry</LoadingButton>
               </form>
             )}
           </div>

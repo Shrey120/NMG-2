@@ -4,6 +4,7 @@ import { useLoad } from '../useLoad.js';
 import { post } from '../api.js';
 import { isSignedIn, currentName } from '../auth.js';
 import Loading from '../components/Loading.jsx';
+import LoadingButton from '../components/LoadingButton.jsx';
 
 // Shows "Tue 2 Sep" rather than "2026-09-02".
 function dayLabel(dateText) {
@@ -33,6 +34,7 @@ export default function Book() {
   });
   const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
   const update = (field) => (event) => setForm({ ...form, [field]: event.target.value });
@@ -44,12 +46,15 @@ export default function Book() {
 
   async function submit(event) {
     event.preventDefault();
+    if (sending) return;
     setError('');
+    setSending(true);
     try {
       await post('/bookings', { ...form, serviceId, bookingDate: date, slotTime, consent });
       setSent(true);
     } catch (err) {
       setError(err.message);
+      setSending(false);
     }
   }
 
@@ -246,7 +251,7 @@ export default function Book() {
                 </div>
 
                 {error && <p className="error">{error}</p>}
-                <button type="submit" className="btn btn-block">Request this booking</button>
+                <LoadingButton type="submit" className="btn btn-block" loading={sending}>Request this booking</LoadingButton>
               </div>
             )}
           </form>

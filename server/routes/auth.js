@@ -2,23 +2,15 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db.js';
 import { makeToken, requireUser, route } from '../auth.js';
-import { emailOwnerNewStaff } from '../mail.js';
 
 export const router = express.Router();
 
-// Sign-up asks whether you are a customer or a member of staff, and either
-// account works straight away - no approval step.
-//
-//   customer -> signed in, taken to their account page
-//   staff    -> signed in, taken to the admin panel
-//
-// Administrator accounts can never be created from this form. Anything other
-// than "staff" is treated as a customer, so editing the request cannot
-// produce an administrator.
+// Public sign-up always creates a customer account. Staff accounts are created
+// separately by an administrator from the staff panel.
 router.post(
   '/register',
   route(async (req, res) => {
-    const { name, email, password, phone, suburb, consent, accountType } = req.body;
+    const { name, email, password, phone, suburb, consent } = req.body;
 
     if (!consent) return res.status(400).json({ error: 'Please accept the privacy policy' });
     if (!password || password.length < 8) {
@@ -30,7 +22,7 @@ router.post(
       return res.status(400).json({ error: 'That email is already registered' });
     }
 
-    const role = accountType === 'staff' ? 'STAFF' : 'CUSTOMER';
+    const role = 'CUSTOMER';
 
     const passwordHash = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
@@ -38,10 +30,6 @@ router.post(
        VALUES (?, ?, ?, ?, ?, ?, NOW())`,
       [name, email, passwordHash, phone || '', suburb || '', role]
     );
-
-    // Not an approval - just lets the owner know a new staff account exists,
-    // so they can remove it from Staff accounts if they do not recognise it.
-    if (role === 'STAFF') await emailOwnerNewStaff({ name, email });
 
     const user = { id: result.insertId, name, role };
     res.status(201).json({ token: makeToken(user), name, role });

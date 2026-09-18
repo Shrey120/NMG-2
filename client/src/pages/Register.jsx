@@ -3,22 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { post } from '../api.js';
 import { saveSignIn } from '../auth.js';
 
-const TYPES = [
-  {
-    value: 'customer',
-    title: 'Customer',
-    text: 'Make swap offers, post wanted ads and keep track of them. Your account works straight away.',
-  },
-  {
-    value: 'staff',
-    title: 'Staff member',
-    text: 'For people who work at Outlier Autowerke. Takes you straight to the admin panel.',
-  },
-];
-
 export default function Register() {
   const navigate = useNavigate();
-  const [accountType, setAccountType] = useState('customer');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', suburb: '' });
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
@@ -29,12 +15,9 @@ export default function Register() {
     event.preventDefault();
     setError('');
     try {
-      const result = await post('/register', { ...form, consent, accountType });
+      const result = await post('/register', { ...form, consent });
       saveSignIn(result);
-
-      // Both account types are signed in straight away. Staff go to the
-      // admin panel, customers to their own account page.
-      navigate(result.role === 'STAFF' ? '/admin/home' : '/account');
+      navigate('/');
     } catch (err) {
       setError(err.message);
     }
@@ -49,38 +32,6 @@ export default function Register() {
       </p>
 
       <form onSubmit={submit} className="card card-body stack" style={{ marginTop: 24 }}>
-        <div>
-          <span className="label">I am signing up as</span>
-          <div className="stack" style={{ marginTop: 8 }}>
-            {TYPES.map((type) => (
-              <label
-                key={type.value}
-                className="swap-box row"
-                style={{
-                  cursor: 'pointer',
-                  gap: 12,
-                  flexWrap: 'nowrap',
-                  alignItems: 'flex-start',
-                  borderColor: accountType === type.value ? 'var(--black)' : undefined,
-                }}
-              >
-                <input
-                  type="radio"
-                  name="accountType"
-                  value={type.value}
-                  checked={accountType === type.value}
-                  onChange={() => setAccountType(type.value)}
-                  style={{ marginTop: 3 }}
-                />
-                <span>
-                  <strong>{type.title}</strong>
-                  <span className="small muted" style={{ display: 'block', marginTop: 2 }}>{type.text}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
         <div>
           <label className="label" htmlFor="name">Name</label>
           <input id="name" className="input" required value={form.name} onChange={update('name')} />
@@ -118,7 +69,7 @@ export default function Register() {
 
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn btn-block">
-          {accountType === 'staff' ? 'Create staff account' : 'Create account'}
+          Create customer account
         </button>
 
         <p className="small center">

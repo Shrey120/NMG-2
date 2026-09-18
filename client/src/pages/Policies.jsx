@@ -34,7 +34,8 @@ function Page({ title, children }) {
           {children}
           <hr className="divider" />
           <p className="small muted">
-            Questions about this policy can go to {business.email}, or through the{' '}
+            Questions about this policy can go to{' '}
+            <a href={`mailto:${business.email}`}>{business.email}</a>, or through the{' '}
             <Link to="/contact">contact form</Link>.
           </p>
         </div>
