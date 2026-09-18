@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { postForm } from '../api.js';
 import { isSignedIn, currentName } from '../auth.js';
 import { useLoad } from '../useLoad.js';
+import LoadingButton from '../components/LoadingButton.jsx';
 
 const TYPES = ['General', 'Service', 'Parts', 'Collaboration'];
 
@@ -22,18 +23,22 @@ export default function Contact() {
   const [photo, setPhoto] = useState(null);
   const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
   const update = (field) => (event) => setForm({ ...form, [field]: event.target.value });
 
   async function submit(event) {
     event.preventDefault();
+    if (sending) return;
     setError('');
+    setSending(true);
     try {
       await postForm('/enquiries', { ...form, consent }, photo);
       setSent(true);
     } catch (err) {
       setError(err.message);
+      setSending(false);
     }
   }
 
@@ -53,7 +58,7 @@ export default function Contact() {
               <div className="empty">
                 <h2>Enquiry sent</h2>
                 <p className="muted" style={{ marginTop: 10 }}>
-                  It has been emailed to the workshop and added to their dashboard.
+                  Thank you for your enquiry. We will get back to you soon.
                 </p>
 
                 {!isSignedIn() && (
@@ -144,7 +149,7 @@ export default function Contact() {
                 </label>
 
                 {error && <p className="error">{error}</p>}
-                <button type="submit" className="btn btn-block">Send enquiry</button>
+                <LoadingButton type="submit" className="btn btn-block" loading={sending}>Send enquiry</LoadingButton>
               </form>
             )}
 

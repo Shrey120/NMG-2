@@ -141,6 +141,17 @@ h3 { font-size: 1.15rem; }
 .btn:hover { background: var(--white); color: var(--black); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .btn-outline { background: var(--white); color: var(--black); }
 .btn-outline:hover { background: var(--black); color: var(--white); }
 

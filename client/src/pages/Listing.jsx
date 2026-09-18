@@ -5,6 +5,7 @@ import { postForm, money } from '../api.js';
 import Photo from '../components/Photo.jsx';
 import { isSignedIn, currentName } from '../auth.js';
 import Loading from '../components/Loading.jsx';
+import LoadingButton from '../components/LoadingButton.jsx';
 
 function EnquiryForm({ listing }) {
   const [form, setForm] = useState({
@@ -17,12 +18,16 @@ function EnquiryForm({ listing }) {
   const [photo, setPhoto] = useState(null);
   const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
   const update = (field) => (event) => setForm({ ...form, [field]: event.target.value });
 
   async function submit(event) {
     event.preventDefault();
+    if (sending) return;
+    setError('');
+    setSending(true);
     try {
       await postForm(
         '/enquiries',
@@ -38,6 +43,7 @@ function EnquiryForm({ listing }) {
       setSent(true);
     } catch (err) {
       setError(err.message);
+      setSending(false);
     }
   }
 
@@ -46,7 +52,7 @@ function EnquiryForm({ listing }) {
       <div className="card card-body center">
         <h3>Enquiry sent</h3>
         <p className="small muted" style={{ marginTop: 8 }}>
-          It has been emailed to the workshop and added to their dashboard.
+          Thank you for your enquiry. We will get back to you soon.
         </p>
       </div>
     );
@@ -80,7 +86,7 @@ function EnquiryForm({ listing }) {
       </label>
 
       {error && <p className="error">{error}</p>}
-      <button type="submit" className="btn btn-block">Send enquiry</button>
+      <LoadingButton type="submit" className="btn btn-block" loading={sending}>Send enquiry</LoadingButton>
       <p className="form-note">No payment is taken on this site. Enquiries are stored for the workshop to answer.</p>
     </form>
   );

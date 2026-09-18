@@ -15,8 +15,7 @@ export default function SignIn() {
     try {
       const result = await post('/login', { email, password });
       saveSignIn(result);
-      // Staff go to the admin panel, customers go to their own area.
-      navigate(result.role === 'CUSTOMER' ? '/account' : '/admin/home');
+      navigate(result.role === 'CUSTOMER' ? '/' : '/admin/home');
     } catch (err) {
       setError(err.message);
     }
