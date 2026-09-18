@@ -13,7 +13,7 @@ system, not against the plan.
 | Booking Request | Yes | `/book` - four steps: service, date, slot, details. Slots come from the database, not free text. |
 | Enquiry | Yes | `/contact`, with an optional photo and a consent tick. |
 | Pending Status | Yes | New bookings are saved as `Pending`. The page and the acknowledgement email both say it is not confirmed. |
-| Owner Notification | Yes | Email on every new booking and every enquiry. |
+| Owner Notification | Yes | Email on every new booking and every enquiry, sent to the address in Admin panel → Business details. |
 | Client Notification | Yes | Acknowledgement on submission, then a confirmation or decline email once the owner decides. |
 | Booking Approval | Yes | `/admin/bookings`, or the Accept link in the email. |
 | Booking Rejection | Yes | Same two places. The slot stays open. |
@@ -57,13 +57,9 @@ availability, and review enquiries - all present.
 
 ## Two things worth knowing
 
-**Emails are written but not delivered yet.** The client has not supplied a
-mailbox, so `MAIL_HOST` is blank and every message is written to the `emailLog`
-table and printed to the terminal instead of being sent. The moment SMTP details
-arrive, filling in five lines of `server/.env` turns delivery on with no code
-change. `emailLog` is the evidence that the right message was produced at the
-right moment - useful for the demonstration, and it is worth keeping afterwards
-as a sent-items record.
+**Where emails go.** Owner emails are sent to the address in Business
+details, so the owner changes it in the admin panel. Sending needs a mailbox in
+`server/.env`; see docs/email-setup.md.
 
 **"Where technically supported" in 2.5 is doing real work.** Gmail and Outlook
 strip buttons and scripts out of email, so Accept and Decline are plain links
@@ -75,9 +71,8 @@ across mail clients, and it satisfies the requirement.
 1. `/book` - pick a service, note that closed and fully booked days cannot be
    selected, choose a slot, submit.
 2. The page says the booking is pending and not confirmed.
-3. `SELECT toAddress, subject FROM emailLog ORDER BY id DESC LIMIT 2;` - the
-   owner's request and the customer's acknowledgement.
-4. Copy the Accept link out of the owner email body and open it. It confirms.
+3. Open the owner's inbox (the Business details email). The booking request is there.
+4. Click Accept in that email. It confirms.
 5. Go back to `/book`, same date - that slot is gone.
 6. Open the link a second time - "link already used".
 7. `/admin/bookings` - the booking now sits under Accepted.

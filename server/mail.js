@@ -2,10 +2,16 @@ import nodemailer from 'nodemailer';
 import './env.js';
 import { pool } from './db.js';
 
-// Every message is written to the emailLog table first, then sent if a mail
-// account has been configured. The client has not supplied one yet, so
-// MAIL_HOST is blank and nothing actually leaves the building - but the log
-// still shows the right message was produced at the right moment.
+// How email works:
+//
+//   FROM - the mailbox in server/.env (MAIL_USER). This is the account that
+//          does the sending, for example a Gmail account with an App Password.
+//   TO   - owner emails go to the address in Admin panel -> Business details.
+//          Change it there and the next booking or enquiry goes to the new
+//          address, no restart needed. Customer emails go to the customer.
+//
+// If MAIL_HOST is blank, emails are printed in the terminal instead of sent.
+
 const canSend = Boolean(process.env.MAIL_HOST);
 const port = Number(process.env.MAIL_PORT) || 587;
 
@@ -13,50 +19,34 @@ export const transport = canSend
   ? nodemailer.createTransport({
       host: process.env.MAIL_HOST,
       port,
-      // Port 465 expects an encrypted connection from the start. Port 587
-      // starts plain and upgrades, which nodemailer does on its own.
+      // Port 465 is encrypted from the start; 587 upgrades itself.
       secure: port === 465,
-      // A local test inbox such as Mailpit needs no login, so only send one
-      // when a username has been set.
       auth: process.env.MAIL_USER
         ? { user: process.env.MAIL_USER, pass: process.env.MAIL_PASSWORD }
         : undefined,
     })
   : null;
 
-export const ownerAddress = () => process.env.MAIL_TO || 'owner@outlierautowerke.example';
+// The owner's address, read from Business details every time so a change in
+// the admin panel takes effect immediately.
+export async function ownerAddress() {
+  const [[details]] = await pool.query('SELECT email FROM businessDetails WHERE id = 1');
+  return details?.email || process.env.MAIL_USER;
+}
 
 async function send(to, subject, body, replyTo) {
-  let delivered = false;
-  let error = null;
-
-  if (canSend && to) {
-    // A failed email must never break the thing that triggered it. The
-    // booking or enquiry is already saved by this point, so the failure is
-    // recorded in emailLog and the customer still gets a normal response.
-    try {
-      await transport.sendMail({
-        from: process.env.MAIL_FROM || process.env.MAIL_USER || ownerAddress(),
-        to,
-        replyTo,
-        subject,
-        text: body,
-      });
-      delivered = true;
-    } catch (err) {
-      error = err.message;
-      console.error(`[email failed] ${subject} -> ${to}: ${err.message}`);
-    }
-  } else {
-    console.log(`\n--- email (not sent, no mail account) ---\nTo: ${to}\nSubject: ${subject}\n\n${body}\n---\n`);
+  if (!canSend) {
+    console.log(`\n--- email (MAIL_HOST is blank, so not sent) ---\nTo: ${to}\nSubject: ${subject}\n\n${body}\n---\n`);
+    return;
   }
 
-  await pool.query(
-    'INSERT INTO emailLog (toAddress, subject, body, delivered, error) VALUES (?, ?, ?, ?, ?)',
-    [to, subject, body, delivered ? 1 : 0, error]
-  );
-
-  return delivered;
+  // A failed email must never break the booking or enquiry that triggered
+  // it - those are already saved by this point - so the error is only printed.
+  try {
+    await transport.sendMail({ from: process.env.MAIL_USER, to, replyTo, subject, text: body });
+  } catch (err) {
+    console.error(`[email failed] ${subject} -> ${to}: ${err.message}`);
+  }
 }
 
 const when = (booking) => `${booking.bookingDate} at ${String(booking.slotTime).slice(0, 5)}`;
@@ -65,14 +55,12 @@ const when = (booking) => `${booking.bookingDate} at ${String(booking.slotTime).
 
 // Goes to the owner. Carries the two links that let them decide without
 // signing in.
-export function emailOwnerNewBooking(booking, serviceTitle, baseUrl) {
-  // baseUrl is PUBLIC_URL when set, which is what makes these links work
-  // from a phone rather than only on the computer running the site.
+export async function emailOwnerNewBooking(booking, serviceTitle, baseUrl) {
   const accept = `${baseUrl}/api/bookings/action?token=${booking.actionToken}&do=accept`;
   const decline = `${baseUrl}/api/bookings/action?token=${booking.actionToken}&do=decline`;
 
   return send(
-    ownerAddress(),
+    await ownerAddress(),
     `New booking request: ${serviceTitle} on ${when(booking)}`,
     [
       'A new booking request is waiting for you.',
@@ -163,9 +151,9 @@ export function emailCustomerDeclined(booking, serviceTitle) {
 
 // --- Enquiries -------------------------------------------------------------
 
-export function emailOwnerEnquiry(enquiry) {
+export async function emailOwnerEnquiry(enquiry) {
   return send(
-    ownerAddress(),
+    await ownerAddress(),
     `Website enquiry: ${enquiry.subject}`,
     [
       `Type:    ${enquiry.type}`,
@@ -201,9 +189,9 @@ export function emailCustomerEnquiryAck(enquiry) {
 // --- Staff accounts -------------------------------------------------------
 
 // A heads-up, not an approval. Staff accounts work as soon as they are made.
-export function emailOwnerNewStaff(user) {
+export async function emailOwnerNewStaff(user) {
   return send(
-    ownerAddress(),
+    await ownerAddress(),
     `New staff account: ${user.name}`,
     [
       'A new staff account has just been created on the website.',

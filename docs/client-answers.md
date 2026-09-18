@@ -70,7 +70,8 @@ Please confirm.
 **2. Which email address should enquiries go to?** The answer says "email
 address + dashboard" without naming one. The dashboard half is built and the
 sending half is written, but it needs a real address and mail account before it
-can send. Currently set by `MAIL_TO` in the server configuration.
+can send. Resolved: owner emails go to the address in Admin panel → Business
+details, which the owner sets themselves.
 
 **3. Data retention period.** "Consult data and privacy laws" is not something
 we can decide for you. Under the Australian Privacy Act personal information

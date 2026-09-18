@@ -73,11 +73,9 @@ npm run dev
 Vite forwards anything starting with `/api` to the Express server, so the
 browser only ever talks to one address.
 
-**Email.** Bookings and enquiries email the owner and the customer. Nothing
-needs setting up to try it: with the `MAIL_` lines blank, every email is listed
-under **Admin panel → Sent emails**, and the Accept and Decline links in them
-work from there. To send real email through Gmail, see
-[docs/email-setup.md](docs/email-setup.md).
+**Email.** Booking and contact emails go to the address in **Admin panel →
+Business details → Email**. The website sends them from a Gmail account set
+in `server/.env`. Setup: [docs/email-setup.md](docs/email-setup.md).
 
 ### Admin panel
 
@@ -126,7 +124,6 @@ client/src/
 | `businessDetails` | trading name, ABN, suburb, email and footer text (one row) |
 | `availability` | opening hours per weekday, which also decide the bookable slots |
 | `blockedSlots` | dates and single slots the owner has blocked |
-| `emailLog` | every email the site tried to send, with any error |
 | `services` | the workshop service list, and whether each can be booked online |
 | `projects` | portfolio builds |
 | `projectWork` | bullet points belonging to a project (one to many) |

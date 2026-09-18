@@ -57,8 +57,8 @@ export default function AdminBusiness() {
           <label className="label" htmlFor="b-email">Email</label>
           <input id="b-email" type="email" className="input" required value={form.email} onChange={update('email')} />
           <p className="form-note" style={{ marginTop: 6 }}>
-            Shown publicly. The client asked for no phone number and no street
-            address on the website.
+            Booking requests and contact form messages are emailed to this
+            address. It is also shown publicly on the website.
           </p>
         </div>
 

@@ -5,7 +5,10 @@
 --
 -- Tables are dropped child first so the foreign keys do not block the drop.
 
+-- No longer used. Dropped so databases made by an older version are tidied up.
 DROP TABLE IF EXISTS emailLog;
+DROP TABLE IF EXISTS openingHours;
+
 DROP TABLE IF EXISTS blockedSlots;
 DROP TABLE IF EXISTS availability;
 DROP TABLE IF EXISTS businessDetails;
@@ -86,20 +89,6 @@ CREATE TABLE blockedSlots (
   reason    VARCHAR(200) NOT NULL DEFAULT '',
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idxBlockDate (blockDate)
-);
-
--- Every email the system tried to send. Until the client supplies a mail
--- account nothing actually leaves the building, so this table is the evidence
--- that the right message was produced at the right moment.
-CREATE TABLE emailLog (
-  id        INT AUTO_INCREMENT PRIMARY KEY,
-  toAddress VARCHAR(200) NOT NULL,
-  subject   VARCHAR(300) NOT NULL,
-  body      TEXT NOT NULL,
-  delivered TINYINT(1) NOT NULL DEFAULT 0,
-  -- Why it did not send, when a mail account is set but something failed.
-  error     VARCHAR(500) NULL,
-  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE services (

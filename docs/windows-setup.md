@@ -117,36 +117,16 @@ MySQL is already running as a Windows Service.
 
 ---
 
-## 7. Email: nothing to set up
+## 7. Email
 
-With the `MAIL_` lines left blank, the site still produces every email but
-does not send them anywhere. You read them in the admin panel:
+Booking and contact emails go to the address in **Admin panel → Business
+details → Email**. To actually send them, the website needs a Gmail account
+to send from. Follow [email-setup.md](email-setup.md). It takes five minutes
+and needs nothing installed.
 
-**Sign in as the administrator → Sent emails.**
-
-Every booking, confirmation, decline and enquiry email is listed there. Click
-one to read it. The **Accept** and **Decline** links in the owner's booking email
-work from there, so you can demonstrate the whole booking flow with no mail
-account:
-
-1. Book a service at http://localhost:5173/book.
-2. Admin panel → **Sent emails**. Open *New booking request*.
-3. Click the **ACCEPT BOOKING** link.
-4. Back in **Sent emails**, click **Refresh**. The customer's *Booking confirmed*
-   email is there.
-
-That is all you need for development and for the demonstration.
-
-### If you want emails to reach a real inbox
-
-Use a Gmail account. It works the same on Windows as anywhere else, with
-nothing to install. Follow **Option B** in [email-setup.md](email-setup.md):
-turn on 2-Step Verification, create an App Password, and fill in the `MAIL_`
-lines in `server\.env`. Then restart the site and run:
-
-```powershell
-npm run mail:test
-```
+Until you do that, the site still works fully. Bookings and enquiries still
+appear in the admin panel. The emails are printed in the PowerShell window
+instead of being sent.
 
 ---
 
