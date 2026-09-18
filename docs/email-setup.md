@@ -1,85 +1,72 @@
 # Setting up email
 
-The website sends six kinds of email: new booking to the owner (with Accept and
-Decline links), booking received / confirmed / declined to the customer, new
-enquiry to the owner with an acknowledgement to the sender, and new staff
-account to the owner.
+The website sends these emails:
 
-All the settings live in **`server/.env`**. That file is never committed to
-GitHub, because it holds passwords. `server/.env.example` is the template.
+| When | To | Email |
+|---|---|---|
+| Someone requests a booking | owner | New booking request, with **Accept** and **Decline** links |
+| Someone requests a booking | customer | Request received - **not yet confirmed** |
+| Owner accepts | customer | Booking confirmed |
+| Owner declines | customer | Booking declined |
+| Someone sends an enquiry | owner, and the sender | The enquiry, and an acknowledgement |
+| Someone signs up as staff | owner | New staff account |
 
-There are two ways to set it up. Use **Option A** while developing and for the
-demonstration. Use **Option B** when you want real emails to reach real inboxes.
+All the settings live in **`server/.env`**. That file is never uploaded to
+GitHub because it holds passwords. `server/.env.example` is the template.
+
+There are three ways to set it up. **All three work on Windows, Mac and Linux.**
+
+| | You need | Emails go to |
+|---|---|---|
+| **A - nothing** | nothing at all | the **Sent emails** screen in the admin panel |
+| **B - Gmail** | a Gmail account | real inboxes |
+| **C - test inbox** | the Mailpit program | a pretend inbox on your own computer |
+
+**For development and the demonstration, Option A is enough.**
 
 ---
 
-## Option A - a local test inbox (recommended for development and the demo)
+## Option A - nothing to set up
 
-Every email the site sends lands in an inbox on your own computer that you open
-in the browser. Nothing reaches a real person, links in the emails can be
-clicked, and no passwords are needed.
-
-**1. Start the inbox** (once; it keeps running in Docker):
-
-```bash
-docker run -d --name oa-mail -p 1025:1025 -p 8025:8025 axllent/mailpit
-```
-
-After a restart of your computer: `docker start oa-mail`
-
-**2. Put these lines in `server/.env`:**
+Leave every `MAIL_` line in `server/.env` blank:
 
 ```
-MAIL_HOST=127.0.0.1
-MAIL_PORT=1025
+MAIL_HOST=
 MAIL_USER=
 MAIL_PASSWORD=
-MAIL_FROM=bookings@outlierautowerke.example
-MAIL_TO=owner@outlierautowerke.example
-PUBLIC_URL=http://localhost:5173
 ```
 
-`MAIL_USER` and `MAIL_PASSWORD` stay empty - the test inbox has no login.
+The site still produces every email, it just does not send them. Read them at
+**Admin panel → Sent emails**. Click one to open it.
 
-**3. Restart the site** so it reads the new settings: stop `npm run dev` with
-Ctrl+C and run it again.
+The Accept and Decline links in the owner's booking email work from that
+screen, so the whole booking flow can be demonstrated:
 
-**4. Check it works:**
-
-```bash
-npm run mail:test
-```
-
-You should see `Sent.` Then open **http://localhost:8025** - the test email is
-there.
-
-**5. Try the real flow.** Book a service at http://localhost:5173/book, then
-open http://localhost:8025. The owner's email is there with Accept and Decline
-links. Click Accept - the customer's confirmation email appears a second later.
+1. Book a service at http://localhost:5173/book.
+2. Admin panel → **Sent emails** → open *New booking request*.
+3. Click **ACCEPT BOOKING**.
+4. Click **Refresh** - the customer's *Booking confirmed* email is there.
 
 ---
 
-## Option B - real email through a Gmail account
+## Option B - real email through Gmail
 
 Gmail will not accept your normal Gmail password from a program. You need an
 **App Password**, which is a separate 16 letter password just for this.
 
-**1. Turn on 2-Step Verification** for the Gmail account (App Passwords do not
-exist without it):
-https://myaccount.google.com/security → *2-Step Verification* → turn on.
+**1. Turn on 2-Step Verification** for the Gmail account. App Passwords do not
+exist without it: https://myaccount.google.com/security → *2-Step Verification*.
 
-**2. Create an App Password:**
-https://myaccount.google.com/apppasswords → type a name such as
-`Outlier Autowerke website` → *Create*.
-Google shows a 16 letter password like `abcd efgh ijkl mnop`. Copy it now - it
-is only shown once.
+**2. Create an App Password:** https://myaccount.google.com/apppasswords →
+type a name such as `Outlier Autowerke website` → *Create*. Google shows
+something like `abcd efgh ijkl mnop`. Copy it now, it is only shown once.
 
-> If that page says App Passwords are not available, the account is either
-> missing 2-Step Verification, or it is a work/school account where an
-> administrator has switched them off.
+> If that page says App Passwords are not available, the account is missing
+> 2-Step Verification, or it is a work or university account where they have
+> been switched off. Use a personal Gmail account.
 
-**3. Put these lines in `server/.env`** (use your own address, and the App
-Password with the spaces removed):
+**3. Fill in `server/.env`** with your own address and the App Password,
+spaces removed:
 
 ```
 MAIL_HOST=smtp.gmail.com
@@ -88,80 +75,102 @@ MAIL_USER=yourname@gmail.com
 MAIL_PASSWORD=abcdefghijklmnop
 MAIL_FROM=yourname@gmail.com
 MAIL_TO=yourname@gmail.com
-PUBLIC_URL=http://localhost:5173
 ```
 
-- `MAIL_USER` - the Gmail address that sends the emails.
-- `MAIL_PASSWORD` - the App Password, **not** your Gmail password.
-- `MAIL_FROM` - must be the same Gmail address. Gmail replaces any other
-  sender address with its own.
-- `MAIL_TO` - who receives owner notifications (new bookings, enquiries, new
-  staff). For testing, your own address. Later, the workshop's address.
-- `PUBLIC_URL` - see "The Accept and Decline links" below.
+- `MAIL_PASSWORD` is the App Password, **not** your Gmail password.
+- `MAIL_FROM` must be the same Gmail address. Gmail replaces any other sender.
+- `MAIL_TO` is who receives the owner's emails. Your own address for testing,
+  the workshop's later.
 
-**4. Restart the site** (Ctrl+C, then `npm run dev`).
+To open the file: Windows `notepad server\.env`, Mac `open -e server/.env`.
 
-**5. Check it:**
+**4. Restart the site** - Ctrl+C in the window running it, then `npm run dev`.
 
-```bash
+**5. Test it:**
+
+```
 npm run mail:test
 ```
 
-`Sent.` means it worked - look in the `MAIL_TO` inbox, and the spam folder the
-first time. If it fails, the command says why:
+`Sent.` means it works. Check the `MAIL_TO` inbox, and the spam folder the
+first time. If not, it tells you why:
 
 | It says | Fix |
 |---|---|
 | *The password was refused* | You used your normal Gmail password, or copied the App Password wrongly. Make a new one. |
-| *Could not reach the mail server* | Check `MAIL_HOST=smtp.gmail.com` and `MAIL_PORT=587`. Some university and office networks block port 587 - try from home or a phone hotspot. |
+| *Could not reach the mail server* | Check `MAIL_HOST=smtp.gmail.com` and `MAIL_PORT=587`. University and office wifi sometimes blocks port 587 - try from home or a phone hotspot. |
 
-Gmail allows roughly 500 emails a day from a personal account. That is far
-more than this site needs.
+Every email is also still listed under **Sent emails**, marked *Delivered* or
+*Failed* with the reason.
+
+---
+
+## Option C - a test inbox on your own computer
+
+Emails land in a pretend inbox that you open in the browser. Only worth it if
+you want to see them the way an email program shows them; Option A covers
+everything else.
+
+**1. Start Mailpit.**
+
+- **Windows:** download `mailpit-windows-amd64.zip` from
+  https://github.com/axllent/mailpit/releases/latest, unzip it, and
+  double-click `mailpit.exe`. If Windows says *"Windows protected your PC"*,
+  click **More info → Run anyway**, and allow it through the firewall on
+  private networks. Leave its window open while you work.
+- **Mac or Linux with Docker:**
+  `docker run -d --name oa-mail -p 1025:1025 -p 8025:8025 axllent/mailpit`
+
+**2. Fill in `server/.env`:**
+
+```
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+MAIL_USER=
+MAIL_PASSWORD=
+MAIL_FROM=bookings@outlierautowerke.example
+MAIL_TO=owner@outlierautowerke.example
+```
+
+`MAIL_USER` and `MAIL_PASSWORD` stay empty; Mailpit has no login.
+
+**3. Restart the site**, run `npm run mail:test`, then open
+**http://localhost:8025**.
 
 ---
 
 ## When the client gives you their own mailbox
 
-Their email provider (the company that hosts their domain email) will give
-four details. They go in the same lines:
+Their email provider gives four details. Same lines as Gmail:
 
 ```
-MAIL_HOST=<the SMTP server they give you>
+MAIL_HOST=<SMTP server they give you>
 MAIL_PORT=<usually 587, sometimes 465>
 MAIL_USER=<the full mailbox address>
 MAIL_PASSWORD=<that mailbox's password or app password>
 MAIL_FROM=<the same mailbox address>
-MAIL_TO=<where owner notifications should go>
+MAIL_TO=<where the owner's emails should go>
 ```
 
-Port 465 and 587 both work - the code switches encryption on correctly for
-each. Run `npm run mail:test` after changing them.
+Ports 465 and 587 both work; the code sets encryption correctly for each. Run
+`npm run mail:test` after changing them.
 
 ---
 
 ## The Accept and Decline links
 
-The owner's email contains links that accept or decline a booking. They are
-built from `PUBLIC_URL`.
+They are built from `PUBLIC_URL` in `server/.env`.
 
 - **While developing:** `PUBLIC_URL=http://localhost:5173`. The links only work
-  on the computer running the site - clicking them on your phone will not.
+  on the computer running the site, not on your phone.
 - **Once the site is live:** set it to the real address, for example
-  `PUBLIC_URL=https://www.outlierautowerke.com.au`, so the links work from
-  anywhere.
+  `PUBLIC_URL=https://www.outlierautowerke.com.au`, so they work anywhere.
 
 ---
 
 ## If an email fails
 
 A booking or enquiry is **never lost** because an email failed. It is saved
-first; the email is attempted after. Every attempt, successful or not, is
-recorded in the `emailLog` table with the reason:
-
-```sql
-SELECT createdAt, toAddress, subject, delivered, error
-FROM emailLog ORDER BY id DESC LIMIT 20;
-```
-
-`delivered = 0` with an error such as `Invalid login` tells you exactly what to
-fix.
+first and the email is tried afterwards. Every attempt is listed under
+**Sent emails** as *Delivered*, *Not sent* (no mail account set) or *Failed*
+with the reason.

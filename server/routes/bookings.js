@@ -2,7 +2,7 @@ import express from 'express';
 import crypto from 'node:crypto';
 import { pool } from '../db.js';
 import { readUser, requireStaff, route } from '../auth.js';
-import { isSlotBookable } from '../slots.js';
+import { isSlotBookable, slotsForDate } from '../slots.js';
 import {
   emailOwnerNewBooking,
   emailCustomerPending,
@@ -119,9 +119,16 @@ router.post(
     if (service.bookable === 0) return res.status(400).json({ error: 'That service cannot be booked online' });
 
     // Checked again here, not just in the browser, so the slot cannot be
-    // taken by editing the request.
-    if (!(await isSlotBookable(b.bookingDate, b.slotTime))) {
-      return res.status(400).json({ error: 'That slot is no longer available. Please pick another.' });
+    // taken by editing the request. The message says why, so the customer
+    // knows whether to pick another time or another day.
+    const day = await slotsForDate(b.bookingDate);
+    if (!day.open) return res.status(400).json({ error: `${day.reason}. Please pick another day.` });
+
+    const slot = day.slots.find((s) => s.time === String(b.slotTime));
+    if (!slot) return res.status(400).json({ error: 'That is not one of the available times.' });
+    if (!slot.available) {
+      const why = { booked: 'has just been booked', blocked: 'is not available', past: 'has already passed' };
+      return res.status(400).json({ error: `That time ${why[slot.reason] || 'is not available'}. Please pick another.` });
     }
 
     const actionToken = crypto.randomBytes(24).toString('hex');

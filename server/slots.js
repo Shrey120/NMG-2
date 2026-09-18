@@ -20,9 +20,21 @@ const toMinutes = (time) => {
 };
 const toTime = (minutes) => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}:00`;
 
+// A date as "2026-09-18" in the computer's own timezone.
+//
+// Do not use toISOString() for this. It converts to UTC first, so in
+// Queensland (UTC+10) any time before 10am comes out as yesterday's date.
+export const localDateText = (date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
 export async function slotsForDate(dateText) {
   const date = new Date(`${dateText}T00:00:00`);
   if (Number.isNaN(date.getTime())) return { open: false, reason: 'Not a valid date', slots: [] };
+
+  // Dates in the past can never be booked. Comparing "2026-09-18" style text
+  // works because the format sorts in date order.
+  const today = localDateText(new Date());
+  if (dateText < today) return { open: false, reason: 'That date has already passed', slots: [] };
 
   // MySQL DAYOFWEEK counts Sunday as 1, and so does JavaScript getDay() + 1.
   const weekday = date.getDay() + 1;
@@ -49,7 +61,7 @@ export async function slotsForDate(dateText) {
 
   // Slots in the past cannot be booked. Compared in local time.
   const now = new Date();
-  const isToday = dateText === `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const isToday = dateText === localDateText(now);
   const minutesNow = now.getHours() * 60 + now.getMinutes();
 
   const slots = [];

@@ -23,8 +23,11 @@ written out, so anything on screen can be traced to the line that produced it.
 
 ## Getting it running
 
-**1. You need a MySQL server.** Either install MySQL locally, or run one in
-Docker:
+> **On Windows?** Follow [docs/windows-setup.md](docs/windows-setup.md)
+> instead. It covers everything from a fresh laptop, with no Docker.
+
+**1. You need a MySQL server.** Install MySQL Community Server 8.4 (port 3306),
+or on Mac/Linux run one in Docker:
 
 ```bash
 docker run --name oa-mysql -e MYSQL_ROOT_PASSWORD=rootpass -p 3307:3306 -d mysql:8
@@ -39,7 +42,8 @@ npm run setup
 **3. Add your database details**
 
 ```bash
-cp server/.env.example server/.env
+cp server/.env.example server/.env             # Mac / Linux
+Copy-Item server\.env.example server\.env      # Windows PowerShell
 ```
 
 Then edit `server/.env`. For the Docker command above, set `DB_PORT=3307`,
@@ -69,16 +73,10 @@ npm run dev
 Vite forwards anything starting with `/api` to the Express server, so the
 browser only ever talks to one address.
 
-**Email.** Bookings and enquiries send email to the owner and the customer. For
-development, run a local test inbox and open http://localhost:8025 to read what
-was sent:
-
-```bash
-docker run -d --name oa-mail -p 1025:1025 -p 8025:8025 axllent/mailpit
-npm run mail:test
-```
-
-Full instructions for the test inbox, Gmail, and the client's own mailbox are in
+**Email.** Bookings and enquiries email the owner and the customer. Nothing
+needs setting up to try it: with the `MAIL_` lines blank, every email is listed
+under **Admin panel → Sent emails**, and the Accept and Decline links in them
+work from there. To send real email through Gmail, see
 [docs/email-setup.md](docs/email-setup.md).
 
 ### Admin panel

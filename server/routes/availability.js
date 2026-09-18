@@ -1,7 +1,7 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { requireStaff, requireAdmin, route } from '../auth.js';
-import { slotsForDate } from '../slots.js';
+import { slotsForDate, localDateText } from '../slots.js';
 
 export const router = express.Router();
 
@@ -37,7 +37,7 @@ router.get(
     for (let offset = 0; offset < days; offset += 1) {
       const date = new Date(start);
       date.setDate(start.getDate() + offset);
-      const text = date.toISOString().slice(0, 10);
+      const text = localDateText(date);
 
       const { open, reason, slots } = await slotsForDate(text);
       out.push({

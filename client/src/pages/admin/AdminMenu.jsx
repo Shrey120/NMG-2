@@ -12,6 +12,7 @@ const STAFF_LINKS = [
   { to: '/admin/offers', label: 'Swap offers' },
   { to: '/admin/posts', label: 'Wanted & Exchange' },
   { to: '/admin/reviews', label: 'Testimonials' },
+  { to: '/admin/emails', label: 'Sent emails' },
 ];
 
 const ADMIN_LINKS = [
